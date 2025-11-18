@@ -312,4 +312,13 @@ public class AdmissionService {
                 .map(admissionMapper::toDto)
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public AdmissionDTO getAdmissionByVisitId(Long visitId){
+        Admission admission = admissionRepository.findByVisit_Id(visitId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Admission not found with ID: " + visitId
+                ));
+        return admissionMapper.toDto(admission);
+    }
 }

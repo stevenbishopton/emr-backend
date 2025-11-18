@@ -26,4 +26,6 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     List<Admission> findByAdmissionDateBetween(LocalDateTime startDate, LocalDateTime endDate);
     List<Admission> findByAdmissionDateAfter(LocalDateTime date);
     List<Admission> findByAdmissionDateBefore(LocalDateTime date);
+
+    Optional<Admission> findByVisit_Id(Long visitId);
 }

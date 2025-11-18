@@ -113,4 +113,10 @@ public class AdmissionController {
         List<AdmissionDTO> admissions = admissionService.getAdmissionsInDateRange(startDate, endDate);
         return ResponseEntity.ok(admissions);
     }
+
+    @GetMapping("/{visitId}/visit-admission")
+    public ResponseEntity<AdmissionDTO> getAdmissionByVisitId(@PathVariable Long visitId) {
+        AdmissionDTO admission = admissionService.getAdmissionByVisitId(visitId);
+        return ResponseEntity.ok(admission);
+    }
 }
