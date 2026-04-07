@@ -1,0 +1,11 @@
+# Backup your current application.properties first
+# Then add these lines to disable Hibernate auto-DDL
+
+# Disable Hibernate auto-DDL to use manual migrations
+spring.jpa.hibernate.ddl-auto=none
+spring.sql.init.mode=always
+spring.sql.init.platform=h2
+
+# Enable manual migration
+spring.liquibase.enabled=false
+spring.flyway.enabled=false
