@@ -4,6 +4,7 @@ package hospital.emr.reception.services;
 import hospital.emr.common.entities.Department;
 import hospital.emr.common.exceptions.DepartmentNotFoundException;
 import hospital.emr.common.repos.DepartmentRepository;
+import hospital.emr.notification.service.DepartmentNotificationService;
 import hospital.emr.patient.entities.Patient;
 import hospital.emr.patient.exceptions.PatientNotFoundException;
 import hospital.emr.patient.repos.PatientRepository;
@@ -36,6 +37,7 @@ public class VisitService {
     private final VisitDepartmentRepository visitDepartmentRepository;
     private final DepartmentRepository departmentRepository;
     private final VisitDepartmentService visitDepartmentService;
+    private final DepartmentNotificationService departmentNotificationService;
 
     @Transactional
     public VisitDTO createVisitAndSendToDepartment(NewVisitRequest request) {
@@ -60,6 +62,37 @@ public class VisitService {
         visitDepartment.setStatus(VisitStatus.IN_QUEUE);
         visitDepartment.setAssignedAt(LocalDateTime.now());
         visitDepartmentRepository.save(visitDepartment);
+
+        // Notify target department that a new patient has been added to their queue
+        String toDepartment = department.getName();
+        if (toDepartment != null && !toDepartment.isBlank()) {
+            String fromDepartment = "reception";
+            String metadata = String.format(
+                    "{\"visitId\":%d,\"fromDepartment\":\"%s\",\"toDepartment\":\"%s\"}",
+                    savedVisit.getId(),
+                    fromDepartment,
+                    toDepartment
+            );
+            departmentNotificationService.sendDepartmentNotification(
+                    fromDepartment,
+                    toDepartment,
+                    "QUEUE_TRANSFER",
+                    "New Patient In Queue",
+                    "A new patient has been added to your queue.",
+                    "HIGH",
+                    metadata
+            );
+
+            departmentNotificationService.sendDepartmentNotification(
+                    fromDepartment,
+                    fromDepartment,
+                    "QUEUE_TRANSFER",
+                    "Patient Registered",
+                    "A patient was registered and sent to " + toDepartment + ".",
+                    "LOW",
+                    metadata
+            );
+        }
 
         return visitMapper.toDto(savedVisit);
     }
@@ -106,6 +139,40 @@ public class VisitService {
         visit.setStatus(VisitStatus.COMPLETED);
         Visit updatedVisit = visitRepository.save(visit);
 
+        String lastDept = visitDepartmentRepository.findByIdVisitId(visitId).stream()
+                .filter(vd -> vd.getStatus() == VisitStatus.IN_QUEUE)
+                .map(VisitDepartment::getDepartment)
+                .filter(d -> d != null)
+                .map(Department::getName)
+                .filter(name -> name != null && !name.isBlank())
+                .findFirst()
+                .orElse("reception");
+
+        String metadata = String.format(
+                "{\"visitId\":%d,\"status\":\"COMPLETED\"}",
+                visitId
+        );
+
+        departmentNotificationService.sendDepartmentNotification(
+                lastDept,
+                lastDept,
+                "QUEUE_UPDATE",
+                "Visit Completed",
+                "A visit was marked as completed.",
+                "MEDIUM",
+                metadata
+        );
+
+        departmentNotificationService.sendDepartmentNotification(
+                lastDept,
+                "reception",
+                "QUEUE_UPDATE",
+                "Visit Completed",
+                "A visit was marked as completed.",
+                "LOW",
+                metadata
+        );
+
         return visitMapper.toDto(updatedVisit);
     }
 
@@ -115,6 +182,40 @@ public class VisitService {
                 .orElseThrow(() -> new VisitNotFoundException("Visit not found with ID: " + visitId));
         visit.setStatus(VisitStatus.ADMITTED);
         Visit updatedVisit = visitRepository.save(visit);
+
+        String lastDept = visitDepartmentRepository.findByIdVisitId(visitId).stream()
+                .filter(vd -> vd.getStatus() == VisitStatus.IN_QUEUE)
+                .map(VisitDepartment::getDepartment)
+                .filter(d -> d != null)
+                .map(Department::getName)
+                .filter(name -> name != null && !name.isBlank())
+                .findFirst()
+                .orElse("reception");
+
+        String metadata = String.format(
+                "{\"visitId\":%d,\"status\":\"ADMITTED\"}",
+                visitId
+        );
+
+        departmentNotificationService.sendDepartmentNotification(
+                lastDept,
+                lastDept,
+                "QUEUE_UPDATE",
+                "Visit Admitted",
+                "A visit was marked as admitted.",
+                "MEDIUM",
+                metadata
+        );
+
+        departmentNotificationService.sendDepartmentNotification(
+                lastDept,
+                "reception",
+                "QUEUE_UPDATE",
+                "Visit Admitted",
+                "A visit was marked as admitted.",
+                "LOW",
+                metadata
+        );
 
         return visitMapper.toDto(updatedVisit);
     }
@@ -133,13 +234,14 @@ public class VisitService {
                 .collect(Collectors.toList());
     }
 
+    // In VisitService.java
     @Transactional(readOnly = true)
     public List<VisitDTO> findVisitsInQueueByDepartment(Long deptId) {
         return visitDepartmentRepository
-                .findActiveQueueByDepartment(deptId, VisitStatus.IN_QUEUE, VisitStatus.IN_QUEUE)
+                .findActiveQueueByDepartment(deptId, VisitStatus.IN_QUEUE)  // Only 2 params now
                 .stream()
-                .map(VisitDepartment::getVisit)  // visits are already filtered at query level
-                .distinct()                      // still safe if multiple VisitDepartments map to same visit
+                .map(VisitDepartment::getVisit)
+                .distinct()
                 .map(visitMapper::toDto)
                 .collect(Collectors.toList());
     }

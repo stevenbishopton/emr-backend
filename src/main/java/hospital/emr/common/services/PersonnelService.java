@@ -7,6 +7,7 @@ import hospital.emr.common.mappers.PersonnelMapper;
 import hospital.emr.common.repos.PersonnelRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,11 +20,13 @@ public class PersonnelService {
 
     private final PersonnelRepository personnelRepository;
     private final PersonnelMapper personnelMapper;
+    private final PasswordEncoder passwordEncoder;
 
     // ✅ Create Personnel
     public PersonnelDTO createPersonnel(PersonnelDTO dto) {
         log.info("Creating personnel");
         Personnel personnel = personnelMapper.toEntity(dto);
+        personnel.setPassword(passwordEncoder.encode(dto.getPassword()));
         Personnel saved = personnelRepository.save(personnel);
         log.info("Personnel created");
         return personnelMapper.toDto(saved);
@@ -54,7 +57,7 @@ public class PersonnelService {
         personnelMapper.updateFromDto(dto, existing);
 
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
-            existing.setPassword(dto.getPassword());
+            existing.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
 
         Personnel updated = personnelRepository.save(existing);

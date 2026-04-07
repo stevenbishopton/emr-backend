@@ -35,7 +35,10 @@ public class Note {
     @Enumerated(EnumType.STRING)
     private NoteType noteType;
 
+    @Lob
+    @Basic(fetch = FetchType.LAZY)
     private String content;
+
 
     private String author;
 

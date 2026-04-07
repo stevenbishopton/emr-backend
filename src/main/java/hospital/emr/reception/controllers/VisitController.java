@@ -58,6 +58,25 @@ public class VisitController {
         return ResponseEntity.ok(visitService.findVisitsInQueueByDepartment(deptId));
     }
 
+    // Add this to your existing VisitController.java
+    @PutMapping("/{visitId}/departments/{departmentId}/complete")
+    public ResponseEntity<VisitDepartmentDTO> markDepartmentVisitAsCompleted(
+            @PathVariable Long visitId,
+            @PathVariable Long departmentId) {
+
+        VisitDepartmentDTO dto = visitDepartmentService.markDepartmentVisitAsCompleted(visitId, departmentId);
+        return ResponseEntity.ok(dto);
+    }
+
+    @PutMapping("/{visitId}/departments/{departmentId}/admitted")
+    public ResponseEntity<VisitDepartmentDTO> markDepartmentVisitAsAdmitted(
+            @PathVariable Long visitId,
+            @PathVariable Long departmentId) {
+
+        VisitDepartmentDTO dto = visitDepartmentService.markDepartmentVisitAsAdmitted(visitId, departmentId);
+        return ResponseEntity.ok(dto);
+    }
+
 
     @PutMapping("/{id}/complete")
     public ResponseEntity<VisitDTO> markVisitAsCompleted(@PathVariable Long id) {
@@ -66,7 +85,7 @@ public class VisitController {
     }
 
 
-    @PutMapping("/{id}/admit")
+    @PutMapping("/{id}/admitted")
     public ResponseEntity<VisitDTO> markVisitAsAdmitted(@PathVariable Long id) {
         VisitDTO updatedVisit = visitService.makeVisitAdmission(id);
         return ResponseEntity.ok(updatedVisit);

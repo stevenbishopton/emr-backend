@@ -1,7 +1,5 @@
 package hospital.emr.patient.entities;
 
-import hospital.emr.common.entities.Personnel;
-import hospital.emr.doctor.entities.Doctor;
 import hospital.emr.reception.entities.Visit;
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,7 +18,6 @@ import java.util.List;
 @Table(
     name = "prescription",
     indexes = {
-        @Index(name = "idx_prescription_prescriber", columnList = "prescriber_id"),
         @Index(name = "idx_prescription_medicalhistory", columnList = "medical_history_id"),
         @Index(name = "idx_prescription_created", columnList = "createdAt")
     }
@@ -36,9 +33,9 @@ public class Prescription {
 
     private String additionalInstructions;
 
-    @ManyToOne
-    @JoinColumn(name = "prescriber_id")
-    private Doctor prescriber;
+    private Boolean isDischarge;
+
+    private String prescriberName;
 
     @ManyToOne
     @JoinColumn(name = "visit_id", nullable = true)

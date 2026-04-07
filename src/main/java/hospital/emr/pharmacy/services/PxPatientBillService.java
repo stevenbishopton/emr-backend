@@ -91,6 +91,20 @@ public class PxPatientBillService {
         return billRepository.findAllByStatus(PxPatientBillStatus.PAID);
     }
 
+    @Transactional(readOnly = true)
+    public List<PxPatientBill> getBillsByItemName(String itemName) {
+        if (itemName == null || itemName.trim().isEmpty()) {
+            return List.of();
+        }
+        // Fetch all paid bills and filter by item name in prescriptions
+        List<PxPatientBill> allPaid = billRepository.findAllByStatus(PxPatientBillStatus.PAID);
+        String term = itemName.trim().toLowerCase();
+        return allPaid.stream()
+                .filter(bill -> bill.getPrescriptions() != null && bill.getPrescriptions().stream()
+                        .anyMatch(px -> px.getItemName() != null && px.getItemName().toLowerCase().contains(term)))
+                .toList();
+    }
+
     @Transactional
     public void deleteBill(Long id) {
         if (!billRepository.existsById(id)) {

@@ -1,10 +1,11 @@
 package hospital.emr.patient.services;
 
-import hospital.emr.common.dtos.NoteDTO;
 import hospital.emr.common.entities.Note;
 import hospital.emr.common.mappers.NoteMapper;
+import hospital.emr.lab.dtos.LabTestResultDTO;
+import hospital.emr.lab.entities.LabTestResult;
+import hospital.emr.lab.services.LabResultService;
 import hospital.emr.patient.dtos.MedicalHistoryDTO;
-import hospital.emr.patient.dtos.PatientDTO;
 import hospital.emr.patient.dtos.VisitMedicalHistoryDTO;
 import hospital.emr.patient.entities.*;
 import hospital.emr.patient.mapper.AdmissionMapper;
@@ -31,6 +32,7 @@ public class MedicalHistoryService {
     private final PrescriptionMapper prescriptionMapper;
     private final VitalSignsMapper vitalSignsMapper;
     private final AdmissionMapper admissionMapper;
+    private final LabResultService labResultService;
 
     @Transactional
     public MedicalHistoryDTO createMedicalHistory(MedicalHistoryDTO medicalHistoryDTO){
@@ -42,7 +44,17 @@ public class MedicalHistoryService {
     @Transactional
     public MedicalHistoryDTO getMedicalHistory(Long patientId){
         MedicalHistory medicalHistory = medicalHistoryRepository.findByPatient_Id(patientId);
-        return medicalHistoryMapper.toDto(medicalHistory);
+        MedicalHistoryDTO dto = medicalHistoryMapper.toDto(medicalHistory);
+        
+        // Map lab test results using LabResultService to get full test details
+        if (medicalHistory != null && medicalHistory.getLabTestResults() != null) {
+            List<LabTestResultDTO> labTestResultDTOs = medicalHistory.getLabTestResults().stream()
+                    .map(labResult -> labResultService.getResultById(labResult.getId()))
+                    .collect(Collectors.toList());
+            dto.setLabTestResults(labTestResultDTOs);
+        }
+        
+        return dto;
     }
 
     // Get medical history grouped by visits - CORRECTED VERSION
@@ -116,9 +128,39 @@ public class MedicalHistoryService {
             }
         }
 
+        // Process lab test results - grouped by visit ID
+        if (medicalHistory.getLabTestResults() != null) {
+            for (LabTestResult labTestResult : medicalHistory.getLabTestResults()) {
+                if (labTestResult.getVisitId() != null) {
+                    Long visitId = labTestResult.getVisitId();
+                    VisitMedicalHistoryDTO visitDTO = visitsMap.computeIfAbsent(visitId,
+                            k -> new VisitMedicalHistoryDTO(visitId));
+                    // Convert to DTO using LabResultService to get full test details
+                    LabTestResultDTO labTestResultDTO = labResultService.getResultById(labTestResult.getId());
+                    visitDTO.getLabTestResults().add(labTestResultDTO);
+                }
+            }
+        }
+
         // Return sorted by visitId (most recent first)
         return visitsMap.values().stream()
                 .sorted((v1, v2) -> v2.getVisitId().compareTo(v1.getVisitId()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all lab test results for a patient from their medical history
+     */
+    @Transactional(readOnly = true)
+    public List<LabTestResultDTO> getLabTestResultsForPatient(Long patientId) {
+        MedicalHistory medicalHistory = medicalHistoryRepository.findByPatient_Id(patientId);
+        
+        if (medicalHistory == null || medicalHistory.getLabTestResults() == null) {
+            return new ArrayList<>();
+        }
+        
+        return medicalHistory.getLabTestResults().stream()
+                .map(labResult -> labResultService.getResultById(labResult.getId()))
                 .collect(Collectors.toList());
     }
 }

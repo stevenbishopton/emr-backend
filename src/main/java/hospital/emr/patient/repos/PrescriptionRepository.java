@@ -13,6 +13,8 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
 
     Optional<Prescription> findByVisit_Id(Long visitId);
 
+    List<Prescription> findByIsDischarge(Boolean isDischarge);
+
     Optional<Prescription> findTopByMedicalHistory_Patient_IdOrderByCreatedAtDesc(Long patientId);
 //
 //    // Find prescriptions by medical history ID

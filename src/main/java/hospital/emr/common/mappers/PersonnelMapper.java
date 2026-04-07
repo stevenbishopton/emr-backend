@@ -2,10 +2,11 @@ package hospital.emr.common.mappers;
 
 import hospital.emr.admin.entities.Admin;
 import hospital.emr.common.dtos.PersonnelDTO;
-import hospital.emr.common.entities.*;
+import hospital.emr.common.entities.Department;
+import hospital.emr.common.entities.Personnel;
 import hospital.emr.common.enums.PersonnelType;
 import hospital.emr.doctor.entities.Doctor;
-
+import hospital.emr.nurse.entities.Nurse;
 import hospital.emr.pharmacy.entities.Pharmacist;
 import hospital.emr.reception.entities.Receptionist;
 import org.mapstruct.*;
@@ -19,14 +20,14 @@ public interface PersonnelMapper {
     PersonnelDTO toDto(Personnel entity);
 
     // Convert DTO -> Entity (delegate to factory)
-    @Mapping(target = "department.id", source = "departmentId")
+    @Mapping(target = "department", expression = "java(mapDepartment(dto.getDepartmentId()))")
     @Mapping(target = "password", expression = "java(dto.getPassword())")
     Personnel toEntity(PersonnelDTO dto);
 
 
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    @Mapping(target = "department.id", source = "departmentId")
+    @Mapping(target = "department", expression = "java(mapDepartment(dto.getDepartmentId()))")
     @Mapping(target = "password", expression = "java(dto.getPassword() != null ? dto.getPassword() : entity.getPassword())")
     void updateFromDto(PersonnelDTO dto, @MappingTarget Personnel entity);
 
@@ -34,9 +35,11 @@ public interface PersonnelMapper {
     default PersonnelType determinePersonnelType(Personnel entity) {
         if (entity == null) return null;
         if (entity instanceof Doctor) return PersonnelType.DOCTOR;
-        if (entity instanceof Admin) return PersonnelType.NURSE;
+        if (entity instanceof Admin) return PersonnelType.ADMIN;
+        if (entity instanceof Nurse) return PersonnelType.NURSE;
         if (entity instanceof Pharmacist) return PersonnelType.PHARMACIST;
         if (entity instanceof Receptionist) return PersonnelType.RECEPTIONIST;
+//        if (entity instanceof LabPersonnel) return PersonnelType.LAB_PERSONNEL;
         return null;
     }
 
@@ -49,11 +52,22 @@ public interface PersonnelMapper {
 
         return switch (dto.getPersonnelType()) {
             case DOCTOR -> new Doctor();
-            case NURSE -> new Admin();
+            case ADMIN -> new Admin();
+            case NURSE -> new Nurse();
             case PHARMACIST -> new Pharmacist();
             case RECEPTIONIST -> new Receptionist();
+//            case LAB_PERSONNEL -> new LabPersonnel();
             default -> throw new IllegalArgumentException("Unknown PersonnelType: " + dto.getPersonnelType());
         };
+    }
+
+    default Department mapDepartment(Long departmentId) {
+        if (departmentId == null) {
+            return null;
+        }
+        Department department = new Department();
+        department.setId(departmentId);
+        return department;
     }
 
 }

@@ -1,5 +1,6 @@
 package hospital.emr.patient.controllers;
 
+import hospital.emr.lab.dtos.LabTestResultDTO;
 import hospital.emr.patient.dtos.MedicalHistoryDTO;
 import hospital.emr.patient.dtos.VisitMedicalHistoryDTO;
 import hospital.emr.patient.services.MedicalHistoryService;
@@ -72,6 +73,17 @@ public class MedicalHistoryController {
             } else {
                 return ResponseEntity.notFound().build();
             }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // Get lab test results for a patient from medical history
+    @GetMapping("/patient/{patientId}/lab-results")
+    public ResponseEntity<List<LabTestResultDTO>> getLabTestResultsForPatient(@PathVariable Long patientId) {
+        try {
+            List<LabTestResultDTO> labTestResults = medicalHistoryService.getLabTestResultsForPatient(patientId);
+            return ResponseEntity.ok(labTestResults);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }

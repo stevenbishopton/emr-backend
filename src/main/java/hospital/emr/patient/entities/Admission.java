@@ -5,7 +5,6 @@ import hospital.emr.reception.entities.Visit;
 import hospital.emr.ward.entities.Ward;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,7 +28,7 @@ public class Admission {
     @JoinColumn(name = "ward_id")
     private Ward ward;
 
-    @OneToMany
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Note> notes;
 
     @OneToOne

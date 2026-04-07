@@ -6,11 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
-import java.util.List;
+
 import java.util.Optional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface PatientRepository extends JpaRepository<Patient, Long> {
@@ -26,6 +23,34 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     Optional<Patient> findByPhoneNumber(String phoneNumber);
     Optional<Patient> findByCode(String code);
 
+     /**
+      * * Finds only the patient's name by ID.
+            *
+            * @param patientId The patient ID.
+            * @return The patient's name or empty if not found.
+            */
+    @Query("SELECT p.names FROM Patient p WHERE p.id = :patientId")
+    Optional<String> findNameById(@Param("patientId") Long patientId);
+
+    // Find patients by HMO insurance status
+    @Query("SELECT p FROM Patient p WHERE p.isHealthInsured = :isHealthInsured")
+    Optional<Patient> findByIsHealthInsured(@Param("isHealthInsured") Boolean isHealthInsured);
+    
+    // Find patient by HMO policy number
+    @Query("SELECT p FROM Patient p WHERE p.HmoPolicyNumber = :hmoPolicyNumber")
+    Optional<Patient> findByHmoPolicyNumber(@Param("hmoPolicyNumber") String hmoPolicyNumber);
+    
+    // Find patients by HMO name
+    @Query("SELECT p FROM Patient p WHERE lower(p.HmoName) LIKE lower(concat('%', :hmoName, '%'))")
+    Optional<Patient> findByHmoNameContainingIgnoreCase(@Param("hmoName") String hmoName);
+    
+    // Find patients with HMO insurance (HMO name is not null)
+    @Query("SELECT p FROM Patient p WHERE p.isHealthInsured = true AND p.HmoName IS NOT NULL")
+    Optional<Patient> findPatientsWithHmo();
+    
+    // Check if HMO policy number exists
+    @Query("SELECT COUNT(p) > 0 FROM Patient p WHERE p.HmoPolicyNumber = :hmoPolicyNumber")
+    boolean existsByHmoPolicyNumber(@Param("hmoPolicyNumber") String hmoPolicyNumber);
 
 //    // Find patient by email
 //    Optional<Patient> findByEmail(String email);

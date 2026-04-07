@@ -28,4 +28,7 @@ public interface AdmissionRepository extends JpaRepository<Admission, Long> {
     List<Admission> findByAdmissionDateBefore(LocalDateTime date);
 
     Optional<Admission> findByVisit_Id(Long visitId);
+    
+    // Delete admissions by medical history ID (for patient deletion)
+    void deleteByMedicalHistory_Id(Long medicalHistoryId);
 }

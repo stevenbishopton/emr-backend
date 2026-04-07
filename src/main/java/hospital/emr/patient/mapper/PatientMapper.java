@@ -19,7 +19,7 @@ public interface PatientMapper {
     PatientDTO toDto(Patient patient);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    @Mapping(target = "medicalHistory", ignore = true) // Keep this for updates to prevent overwriting existing MedicalHistory
+    @Mapping(target = "medicalHistory", ignore = true)
     @Mapping(target = "bills", ignore = true)
     void updatePatientFromDto(PatientDTO patientDTO, @MappingTarget Patient patient);
 }

@@ -1,10 +1,12 @@
 package hospital.emr.pharmacy.services;
 
+import hospital.emr.notification.service.DepartmentNotificationService;
 import hospital.emr.pharmacy.dto.PxNurseDeduction;
 import hospital.emr.pharmacy.dto.PxItemDeducted;
+import hospital.emr.pharmacy.dto.PxNurseItemRequestDTO;
 import hospital.emr.pharmacy.entities.Item;
 import hospital.emr.pharmacy.repos.PxNurseDeductionRepository;
-import hospital.emr.pharmacy.services.ItemService;
+import hospital.emr.pharmacy.repos.PxNurseItemRequestRepository;
 import hospital.emr.pharmacy.repos.ItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +24,8 @@ public class PxNurseDeductionService {
 
     private final PxNurseDeductionRepository deductionRepository;
     private final ItemRepository itemRepository;
+    private final PxNurseItemRequestRepository pxNurseItemRequestRepository;
+    private final DepartmentNotificationService departmentNotificationService;
 
     @Transactional
     public PxNurseDeduction createDeduction(PxNurseDeduction deduction) {
@@ -36,6 +40,35 @@ public class PxNurseDeductionService {
             PxNurseDeduction savedDeduction = deductionRepository.save(deduction);
 
             log.info("Created deduction record for request ID: {}", deduction.getItemRequestId());
+
+            // Notify ward (and pharmacy) that items have been dispensed for the request
+            Long requestId = deduction.getItemRequestId();
+            if (requestId != null) {
+                pxNurseItemRequestRepository.findById(requestId).ifPresent(request -> {
+                    String wardName = request.getWardName();
+                    if (wardName != null && !wardName.isBlank()) {
+                        departmentNotificationService.sendDepartmentNotification(
+                                "pharmacy",
+                                wardName,
+                                "NURSE_PHARMACY_REQUEST_COMPLETED",
+                                "Pharmacy Request Completed",
+                                "Pharmacy has dispensed items for your request.",
+                                "MEDIUM"
+                        );
+                    }
+
+                    // Optional: also notify pharmacy dashboard itself
+                    departmentNotificationService.sendDepartmentNotification(
+                            "pharmacy",
+                            "pharmacy",
+                            "NURSE_PHARMACY_REQUEST_COMPLETED",
+                            "Items Dispensed",
+                            "Items have been dispensed for a nurse request.",
+                            "MEDIUM"
+                    );
+                });
+            }
+
             return savedDeduction;
 
         } catch (Exception e) {

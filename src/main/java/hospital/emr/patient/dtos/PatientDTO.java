@@ -21,6 +21,9 @@ public class PatientDTO {
     private String occupation;
     private Long medicalHistoryId;
     private NextOfKinDTO nextOfKin;
+    private Boolean isHealthInsured;
+    private String hmoPolicyNumber;
+    private String hmoName;
     
     @Data
     public static class NextOfKinDTO {

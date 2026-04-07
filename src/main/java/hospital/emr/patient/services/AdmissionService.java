@@ -5,6 +5,7 @@ import hospital.emr.common.entities.Note;
 import hospital.emr.common.enums.NoteType;
 import hospital.emr.common.mappers.NoteMapper;
 import hospital.emr.common.repos.NoteRepository;
+import hospital.emr.notification.service.DepartmentNotificationService;
 import hospital.emr.patient.dtos.AdmissionDTO;
 import hospital.emr.patient.entities.Admission;
 import hospital.emr.patient.entities.PrescriptionChart;
@@ -44,6 +45,7 @@ public class AdmissionService {
     private final MedicalHistoryRepository medicalHistoryRepository;
     private final VisitService visitService;
     private final PrescriptionChartRepository prescriptionChartRepository;
+    private final DepartmentNotificationService departmentNotificationService;
 
     @Transactional
     public AdmissionDTO admitPatient(AdmissionDTO admissionDto) {
@@ -128,6 +130,29 @@ public class AdmissionService {
                 .updatedAt(LocalDateTime.now())
                 .build();
         prescriptionChartRepository.save(chart);
+
+        // Notify ward (and optionally pharmacy) that a patient has been admitted
+        if (savedAdmission.getWard() != null && savedAdmission.getWard().getName() != null) {
+            String wardName = savedAdmission.getWard().getName();
+            departmentNotificationService.sendDepartmentNotification(
+                    "admissions",
+                    wardName,
+                    "PATIENT_ADMITTED",
+                    "Patient Admitted",
+                    "A patient has been admitted to your ward.",
+                    "MEDIUM"
+            );
+
+            // Also notify pharmacy that a new inpatient admission exists
+            departmentNotificationService.sendDepartmentNotification(
+                    "admissions",
+                    "pharmacy",
+                    "PATIENT_ADMITTED",
+                    "New Inpatient Admission",
+                    "A patient has been admitted and may require medications.",
+                    "MEDIUM"
+            );
+        }
 
         return admissionMapper.toDto(savedAdmission);
     }
@@ -294,6 +319,18 @@ public class AdmissionService {
 
         Admission dischargedAdmission = admissionRepository.save(admission);
         log.info("Patient discharged from admission ID: {} on {}", admissionId, dischargeDate);
+
+        if (dischargedAdmission.getWard() != null && dischargedAdmission.getWard().getName() != null) {
+            String wardName = dischargedAdmission.getWard().getName();
+            departmentNotificationService.sendDepartmentNotification(
+                    "admissions",
+                    wardName,
+                    "PATIENT_DISCHARGED",
+                    "Patient Discharged",
+                    "A patient has been discharged from your ward.",
+                    "MEDIUM"
+            );
+        }
 
         return admissionMapper.toDto(dischargedAdmission);
     }

@@ -9,9 +9,10 @@ public class PrescriptionDTO {
     private Long id;
     private List<PrescriptionEntryDTO> prescriptionEntries;
     private String additionalInstructions;
-    private Long prescriberId;
+    private String prescriberName;
     private Long visitId;
     private Long medicalHistoryId;
+    private Boolean isDischarge;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -26,6 +26,7 @@ public class PrescriptionEntry {
     @ManyToOne
     @JoinColumn(name = "item_id")
     private Item item;
+    private String itemName;
 
     private String dosage; // e.g., "500mg twice daily"
     private String route;        // oral, IV, etc.

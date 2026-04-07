@@ -1,7 +1,5 @@
 package hospital.emr.patient.services;
 
-import hospital.emr.doctor.entities.Doctor;
-import hospital.emr.doctor.exceptions.DoctorNotFoundException;
 import hospital.emr.patient.dtos.PrescriptionDTO;
 import hospital.emr.patient.dtos.PrescriptionEntryDTO;
 import hospital.emr.patient.entities.Prescription;
@@ -17,7 +15,6 @@ import hospital.emr.pharmacy.repos.ItemRepository;
 import hospital.emr.reception.entities.Visit;
 import hospital.emr.reception.exceptions.VisitNotFoundException;
 import hospital.emr.reception.repos.VisitRepository;
-import hospital.emr.common.repos.PersonnelRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,17 +29,11 @@ public class PrescriptionService {
     private final PrescriptionRepository prescriptionRepository;
     private final PrescriptionMapper prescriptionMapper;
     private final ItemRepository itemRepository;
-    private final PersonnelRepository personnelRepository;
     private final MedicalHistoryRepository medicalHistoryRepository;
     private final VisitRepository visitRepository;
 
     @Transactional
     public PrescriptionDTO createPrescription(PrescriptionDTO prescriptionDTO) {
-        // Fetch prescriber
-        var prescriber = personnelRepository.findById(prescriptionDTO.getPrescriberId())
-                .orElseThrow(() -> new DoctorNotFoundException(
-                        "Doctor not found with ID: " + prescriptionDTO.getPrescriberId()));
-
         // Fetch medical history
         var medicalHistory = medicalHistoryRepository.findById(prescriptionDTO.getMedicalHistoryId())
                 .orElseThrow(() -> new MedicalHistoryNotFoundException(
@@ -56,12 +47,13 @@ public class PrescriptionService {
                             "Visit not found with ID: " + prescriptionDTO.getVisitId()));
         }
 
-        // Build prescription
+        // Build prescription - NO MORE PRESCRIBER CASTING!
         Prescription prescription = new Prescription();
-        prescription.setPrescriber((Doctor) prescriber);
+        prescription.setPrescriberName(prescriptionDTO.getPrescriberName()); // Simply set the name as string
         prescription.setMedicalHistory(medicalHistory);
         prescription.setVisit(visit);
         prescription.setAdditionalInstructions(prescriptionDTO.getAdditionalInstructions());
+        prescription.setIsDischarge(prescriptionDTO.getIsDischarge()); // FIX: Add missing isDischarge field
 
         // Process entries
         if (prescriptionDTO.getPrescriptionEntries() != null) {
@@ -105,6 +97,16 @@ public class PrescriptionService {
         // Use mapper to update core fields
         prescriptionMapper.updateFromDto(prescriptionDTO, prescription);
 
+        // Update prescriber name if provided
+        if (prescriptionDTO.getPrescriberName() != null) {
+            prescription.setPrescriberName(prescriptionDTO.getPrescriberName());
+        }
+        
+        // Update isDischarge field if provided
+        if (prescriptionDTO.getIsDischarge() != null) {
+            prescription.setIsDischarge(prescriptionDTO.getIsDischarge());
+        }
+
         // Handle entries manually if needed
         if (prescriptionDTO.getPrescriptionEntries() != null) {
             prescription.getPrescriptionEntries().clear();
@@ -147,7 +149,6 @@ public class PrescriptionService {
         return prescriptionMapper.toDto(prescription);
     }
 
-
     @Transactional(readOnly = true)
     public List<PrescriptionDTO> findAllPrescriptionByMedicalHistoryId(Long id) {
         List<Prescription> prescriptions = prescriptionRepository.findAllByMedicalHistoryId(id);
@@ -162,4 +163,12 @@ public class PrescriptionService {
                 .map(prescriptionMapper::toDto)
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public List<PrescriptionDTO> getAllDischargePrescriptions() {
+        return prescriptionRepository.findByIsDischarge(true).stream()
+                .map(prescriptionMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
 }

@@ -47,6 +47,14 @@ public class PrescriptionController {
         return new ResponseEntity<>(prescriptions, HttpStatus.OK);
     }
 
+    @GetMapping("/discharge")
+    public ResponseEntity<List<PrescriptionDTO>> getAllDischargePrescriptions() {
+        List<PrescriptionDTO> prescriptions = prescriptionService.getAllDischargePrescriptions();
+        return new ResponseEntity<>(prescriptions, HttpStatus.OK);
+    }
+
+
+
     @PutMapping("/{id}")
     public ResponseEntity<PrescriptionDTO> updatePrescription(@PathVariable Long id, @Valid @RequestBody PrescriptionDTO prescriptionDTO) {
         PrescriptionDTO updatedPrescription = prescriptionService.updatePrescription(id, prescriptionDTO);

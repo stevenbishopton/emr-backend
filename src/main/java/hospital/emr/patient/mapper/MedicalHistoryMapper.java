@@ -19,6 +19,7 @@ public interface MedicalHistoryMapper {
     @Mapping(target = "prescriptions", ignore = true)
     @Mapping(target = "vitalSignsList", ignore = true)
     @Mapping(target = "admissions", ignore = true)
+    @Mapping(target = "labTestResults", ignore = true)
     MedicalHistory toEntity(MedicalHistoryDTO dto);
 
     @Mapping(source = "patient.id", target = "patientId")
@@ -33,5 +34,6 @@ public interface MedicalHistoryMapper {
     @Mapping(target = "prescriptions", ignore = true)
     @Mapping(target = "vitalSignsList", ignore = true)
     @Mapping(target = "admissions", ignore = true)
+    @Mapping(target = "labTestResults", ignore = true)
     void updateFromDto(MedicalHistoryDTO dto, @MappingTarget MedicalHistory entity);
 }

@@ -1,5 +1,6 @@
 package hospital.emr.pharmacy.services;
 
+import hospital.emr.notification.service.DepartmentNotificationService;
 import hospital.emr.pharmacy.dto.PxNurseItemRequestDTO;
 import hospital.emr.pharmacy.repos.PxNurseItemRequestRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,12 +17,36 @@ import java.util.Optional;
 public class PxNurseItemRequestService {
 
     private final PxNurseItemRequestRepository pxNurseItemRequestRepository;
+    private final DepartmentNotificationService departmentNotificationService;
 
     @Transactional
     public PxNurseItemRequestDTO createPxNurseItemRequest(PxNurseItemRequestDTO pxNurseItemRequestDTO) {
         log.info("Creating new nurse item request for patient: {}", pxNurseItemRequestDTO.getPatientNames());
         PxNurseItemRequestDTO savedRequest = pxNurseItemRequestRepository.save(pxNurseItemRequestDTO);
         log.info("Successfully created pxNurseRequest with ID: {}", savedRequest.getId());
+
+        // Notify pharmacy about the new nurse request
+        departmentNotificationService.sendDepartmentNotification(
+                "ward",
+                "pharmacy",
+                "NURSE_PHARMACY_REQUEST_CREATED",
+                "New Pharmacy Request",
+                "A new pharmacy request has been created for patient " +
+                        (savedRequest.getPatientNames() != null ? savedRequest.getPatientNames() : ""),
+                "MEDIUM"
+        );
+
+        // Notify originating ward, if available
+        if (savedRequest.getWardName() != null && !savedRequest.getWardName().isBlank()) {
+            departmentNotificationService.sendDepartmentNotification(
+                    "ward",
+                    savedRequest.getWardName(),
+                    "NURSE_PHARMACY_REQUEST_CREATED",
+                    "Pharmacy Request Created",
+                    "A pharmacy request has been created for a patient in your ward.",
+                    "MEDIUM"
+            );
+        }
         return savedRequest;
     }
 

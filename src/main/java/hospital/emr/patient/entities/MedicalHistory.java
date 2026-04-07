@@ -1,6 +1,8 @@
 package hospital.emr.patient.entities;
 
 import hospital.emr.common.entities.Note;
+import hospital.emr.lab.entities.LabTestResult;
+import hospital.emr.radiograph.entities.Radiograph;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -31,14 +33,19 @@ public class MedicalHistory {
     @OrderBy("createdAt DESC")
     private List<Prescription> prescriptions;
 
-    //do not forget lab results, scans etc
-
     @OneToMany(mappedBy = "medicalHistory", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("timeTaken DESC")
     private List<VitalSigns> vitalSignsList;
 
+    @OneToMany(mappedBy = "medicalHistory", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt DESC")
+    private List<LabTestResult> labTestResults;
 
-    @OneToMany(mappedBy = "medicalHistory")
+    @OneToMany(mappedBy = "medicalHistory", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt DESC")
+    private List<Radiograph> radiographs;
+
+    @OneToMany(mappedBy = "medicalHistory", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Admission> admissions;
 
     @OneToOne(cascade = CascadeType.ALL)

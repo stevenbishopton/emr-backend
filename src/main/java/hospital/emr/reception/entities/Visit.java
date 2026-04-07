@@ -11,6 +11,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -43,4 +44,7 @@ public class Visit {
     // The "mappedBy" attribute indicates that the relationship is managed by the "visit" field in the VisitDepartment class.
     @OneToMany(mappedBy = "visit", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<VisitDepartment> visitDepartments;
+
+//    @OneToMany(mappedBy = "visit", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<Test> labTests;
 }

@@ -1,6 +1,7 @@
 package hospital.emr.patient.dtos;
 
 import hospital.emr.common.dtos.NoteDTO;
+import hospital.emr.lab.dtos.LabTestResultDTO;
 import lombok.Data;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,7 @@ public class VisitMedicalHistoryDTO {
     private List<NoteDTO> diagnosisNotes = new ArrayList<>();
     private List<PrescriptionDTO> prescriptions = new ArrayList<>();
     private List<VitalSignsDTO> vitalSigns = new ArrayList<>();
+    private List<LabTestResultDTO> labTestResults = new ArrayList<>();
     private AdmissionDTO admission;
 
     public VisitMedicalHistoryDTO(Long visitId) {
@@ -24,6 +26,7 @@ public class VisitMedicalHistoryDTO {
                 !diagnosisNotes.isEmpty() ||
                 !prescriptions.isEmpty() ||
                 !vitalSigns.isEmpty() ||
+                !labTestResults.isEmpty() ||
                 admission != null;
     }
 }

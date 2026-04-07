@@ -5,6 +5,8 @@ import hospital.emr.patient.entities.MedicalHistory;
 import hospital.emr.patient.entities.Patient;
 import hospital.emr.patient.exceptions.PatientNotFoundException;
 import hospital.emr.patient.mapper.PatientMapper;
+import hospital.emr.patient.repos.AdmissionRepository;
+import hospital.emr.patient.repos.MedicalHistoryRepository;
 import hospital.emr.patient.repos.PatientRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -12,6 +14,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.Random;
 
 @AllArgsConstructor
@@ -19,6 +24,8 @@ import java.util.Random;
 public class PatientService {
     private final PatientRepository patientRepository;
     private final PatientMapper patientMapper;
+    private final AdmissionRepository admissionRepository;
+    private final MedicalHistoryRepository medicalHistoryRepository;
 
     // --- CRUD METHODS ---
     @Transactional
@@ -51,6 +58,13 @@ public class PatientService {
     public void deletePatient(Long id){
         Patient patient = patientRepository.findById(id)
                 .orElseThrow(PatientNotFoundException::new);
+        
+        // Delete admissions first to avoid foreign key constraint violations
+        if (patient.getMedicalHistory() != null) {
+            admissionRepository.deleteByMedicalHistory_Id(patient.getMedicalHistory().getId());
+        }
+        
+        // Now delete the patient (cascade will delete medical history, visits, bills)
         patientRepository.deleteById(id);
     }
 
@@ -74,6 +88,114 @@ public class PatientService {
         Patient patient = patientRepository.findByCode(code)
                 .orElseThrow(PatientNotFoundException::new);
         return patientMapper.toDto(patient);
+    }
+
+
+    @Transactional(readOnly = true)
+    public PatientDTO findPatientById(Long patientId){
+        Patient patient = patientRepository.findById(patientId)
+                .orElseThrow(PatientNotFoundException::new);
+        return patientMapper.toDto(patient);
+    }
+
+    /**
+     * Find patient name by ID
+     *
+     * @param patientId The patient ID
+     * @return Patient name or throws PatientNotFoundException
+     */
+    @Transactional(readOnly = true)
+    public String findPatientNameById(Long patientId) {
+        return patientRepository.findNameById(patientId)
+                .orElseThrow(() -> new PatientNotFoundException("Patient not found with id: " + patientId));
+    }
+
+    // --- SEARCH METHODS ---
+
+    @Transactional(readOnly = true)
+    public List<PatientDTO> searchPatientsByName(String searchTerm) {
+        if (searchTerm == null || searchTerm.trim().isEmpty()) {
+            return List.of();
+        }
+        String term = searchTerm.trim();
+        // Use repository query to find all matching patients (convert Optional to List)
+        Optional<Patient> opt = patientRepository.findByNamesContainingIgnoreCase(term);
+        if (opt.isPresent()) {
+            return List.of(patientMapper.toDto(opt.get()));
+        }
+        // Fallback: fetch all and filter
+        Page<Patient> page = patientRepository.findAll(Pageable.unpaged());
+        return page.stream()
+                .filter(p -> p.getNames() != null && p.getNames().toLowerCase().contains(term.toLowerCase()))
+                .map(patientMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public PatientDTO searchPatientByCode(String code) {
+        if (code == null || code.trim().isEmpty()) {
+            throw new PatientNotFoundException("Patient code must be provided");
+        }
+        return patientRepository.findByCode(code.trim())
+                .map(patientMapper::toDto)
+                .orElseThrow(() -> new PatientNotFoundException("Patient not found with code: " + code));
+    }
+
+    @Transactional(readOnly = true)
+    public PatientDTO searchPatientByPhoneNumber(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+            throw new PatientNotFoundException("Phone number must be provided");
+        }
+        return patientRepository.findByPhoneNumber(phoneNumber.trim())
+                .map(patientMapper::toDto)
+                .orElseThrow(() -> new PatientNotFoundException("Patient not found with phone: " + phoneNumber));
+    }
+
+    // --- HMO METHODS ---
+
+    @Transactional(readOnly = true)
+    public List<PatientDTO> findPatientsByHealthInsuranceStatus(Boolean isHealthInsured) {
+        return patientRepository.findByIsHealthInsured(isHealthInsured)
+                .stream()
+                .map(patientMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public PatientDTO findPatientByHmoPolicyNumber(String hmoPolicyNumber) {
+        if (hmoPolicyNumber == null || hmoPolicyNumber.trim().isEmpty()) {
+            throw new PatientNotFoundException("HMO policy number must be provided");
+        }
+        return patientRepository.findByHmoPolicyNumber(hmoPolicyNumber.trim())
+                .map(patientMapper::toDto)
+                .orElseThrow(() -> new PatientNotFoundException("Patient not found with HMO policy number: " + hmoPolicyNumber));
+    }
+
+    @Transactional(readOnly = true)
+    public List<PatientDTO> searchPatientsByHmoName(String hmoName) {
+        if (hmoName == null || hmoName.trim().isEmpty()) {
+            return List.of();
+        }
+        return patientRepository.findByHmoNameContainingIgnoreCase(hmoName.trim())
+                .stream()
+                .map(patientMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PatientDTO> findPatientsWithHmo() {
+        return patientRepository.findPatientsWithHmo()
+                .stream()
+                .map(patientMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean checkHmoPolicyNumberExists(String hmoPolicyNumber) {
+        if (hmoPolicyNumber == null || hmoPolicyNumber.trim().isEmpty()) {
+            return false;
+        }
+        return patientRepository.existsByHmoPolicyNumber(hmoPolicyNumber.trim());
     }
 
 

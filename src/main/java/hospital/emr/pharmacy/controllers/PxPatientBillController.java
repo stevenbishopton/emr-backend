@@ -60,6 +60,16 @@ public class PxPatientBillController {
     }
 
     /**
+     * Get bills where a specific item (drug) was prescribed/dispensed.
+     */
+    @GetMapping("/by-item")
+    public ResponseEntity<List<PxPatientBill>> getBillsByItemName(
+            @RequestParam("itemName") String itemName) {
+        List<PxPatientBill> bills = billService.getBillsByItemName(itemName);
+        return ResponseEntity.ok(bills);
+    }
+
+    /**
      * Delete a bill (you can later add a rule to only allow deleting drafts).
      */
     @DeleteMapping("/{id}")

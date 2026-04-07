@@ -66,7 +66,7 @@ public class Patient {
     @Column(name = "occupation", nullable = true)
     private String occupation;
 
-    @OneToMany
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Bill> bills;
 
     @OneToOne(mappedBy = "patient", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -74,6 +74,12 @@ public class Patient {
 
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Visit> visits;
+
+    private Boolean isHealthInsured;
+
+    private String HmoName;
+
+    private String HmoPolicyNumber;
 
 }
 
