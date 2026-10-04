@@ -1,10 +1,22 @@
 package hospital.emr.radiograph.services;
 
+import hospital.emr.common.entities.Personnel;
+import hospital.emr.common.repos.PersonnelRepository;
+import hospital.emr.patient.entities.Patient;
+import hospital.emr.patient.repos.PatientRepository;
 import hospital.emr.radiograph.dtos.RadiographVisitHistoryDTO;
+import hospital.emr.radiograph.dtos.RadiographVisitTestDTO;
+import hospital.emr.radiograph.entities.RadiographCatalog;
 import hospital.emr.radiograph.entities.RadiographVisitHistory;
+import hospital.emr.radiograph.entities.RadiographVisitTest;
 import hospital.emr.radiograph.enums.RadiographStatus;
+import hospital.emr.radiograph.enums.RadiographType;
 import hospital.emr.radiograph.mappers.RadiographVisitHistoryMapper;
+import hospital.emr.radiograph.repos.RadiographCatalogRepository;
 import hospital.emr.radiograph.repos.RadiographVisitHistoryRepository;
+import hospital.emr.reception.entities.Visit;
+import hospital.emr.reception.repos.VisitRepository;
+import hospital.emr.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -12,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -25,16 +38,82 @@ public class RadiographVisitHistoryServiceImpl implements RadiographVisitHistory
 
     private final RadiographVisitHistoryRepository repository;
     private final RadiographVisitHistoryMapper mapper;
+    private final PatientRepository patientRepository;
+    private final VisitRepository visitRepository;
+    private final PersonnelRepository personnelRepository;
+    private final RadiographCatalogRepository catalogRepository;
 
     @Override
     @Transactional
     public RadiographVisitHistoryDTO createVisitHistory(RadiographVisitHistoryDTO dto) {
-        log.info("Creating radiograph visit history for patient: {}", dto.getPatient().getFullName());
-        RadiographVisitHistory entity = mapper.createEntity(dto);
+        RadiographVisitHistory entity = new RadiographVisitHistory();
+        entity.setPatient(resolvePatient(dto));
+        entity.setVisit(resolveVisit(dto));
+        entity.setRequestedBy(resolveRequestedBy(dto));
+        entity.setStatus(dto.getStatus() != null ? dto.getStatus() : RadiographStatus.REQUESTED);
+        entity.setVisitType(dto.getVisitType() != null ? dto.getVisitType() : "ROUTINE");
+        entity.setClinicalNotes(dto.getClinicalNotes());
+        entity.setScheduledDate(dto.getScheduledDate());
         entity.setVisitDate(LocalDateTime.now());
+
+        if (dto.getTestsPerformed() != null) {
+            for (RadiographVisitTestDTO testDto : dto.getTestsPerformed()) {
+                entity.getTestsPerformed().add(buildTest(entity, testDto));
+            }
+        }
+
         RadiographVisitHistory saved = repository.save(entity);
         log.info("Successfully created radiograph visit history with ID: {}", saved.getId());
         return mapper.toDto(saved);
+    }
+
+    private Patient resolvePatient(RadiographVisitHistoryDTO dto) {
+        Long patientId = dto.getPatient() != null ? dto.getPatient().getId() : null;
+        if (patientId == null) {
+            throw new IllegalArgumentException("patientId is required to create a radiograph visit");
+        }
+        return patientRepository.findById(patientId)
+                .orElseThrow(() -> new RuntimeException("Patient not found with ID: " + patientId));
+    }
+
+    private Visit resolveVisit(RadiographVisitHistoryDTO dto) {
+        Long visitId = dto.getVisit() != null ? dto.getVisit().getId() : null;
+        if (visitId == null) {
+            return null;
+        }
+        return visitRepository.findById(visitId).orElse(null);
+    }
+
+    private Personnel resolveRequestedBy(RadiographVisitHistoryDTO dto) {
+        Long requestedById = dto.getRequestedBy() != null ? dto.getRequestedBy().getId() : null;
+        if (requestedById != null) {
+            Personnel personnel = personnelRepository.findById(requestedById).orElse(null);
+            if (personnel != null) {
+                return personnel;
+            }
+        }
+        return SecurityUtils.currentPersonnel().orElse(null);
+    }
+
+    private RadiographVisitTest buildTest(RadiographVisitHistory history, RadiographVisitTestDTO dto) {
+        RadiographVisitTest test = new RadiographVisitTest();
+        test.setVisitHistory(history);
+
+        RadiographCatalog catalog = null;
+        if (dto.getCatalogItem() != null && dto.getCatalogItem().getId() != null) {
+            catalog = catalogRepository.findById(dto.getCatalogItem().getId()).orElse(null);
+        }
+        test.setCatalogItem(catalog);
+        test.setType(dto.getType() != null ? dto.getType()
+                : (catalog != null ? catalog.getType() : RadiographType.X_RAY));
+        test.setTestName(dto.getTestName() != null ? dto.getTestName()
+                : (catalog != null ? catalog.getName() : "Unknown Study"));
+        test.setDescription(dto.getDescription() != null ? dto.getDescription()
+                : (catalog != null ? catalog.getDescription() : null));
+        test.setPrice(dto.getPrice() != null ? dto.getPrice()
+                : (catalog != null ? catalog.getPrice() : BigDecimal.ZERO));
+        test.setStatus(dto.getStatus() != null ? dto.getStatus() : "REQUESTED");
+        return test;
     }
 
     @Override
@@ -289,6 +368,48 @@ public class RadiographVisitHistoryServiceImpl implements RadiographVisitHistory
         RadiographVisitHistory updated = repository.save(entity);
         log.info("Successfully added technician notes for radiograph visit history ID: {}", updated.getId());
         return mapper.toDto(updated);
+    }
+
+    @Override
+    @Transactional
+    public RadiographVisitHistoryDTO attachImage(Long id, String imageUrl) {
+        RadiographVisitHistory entity = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Radiograph visit history not found with ID: " + id));
+        entity.setImageUrl(imageUrl);
+        return mapper.toDto(repository.save(entity));
+    }
+
+    @Override
+    @Transactional
+    public RadiographVisitHistoryDTO attachReport(Long id, String reportUrl) {
+        RadiographVisitHistory entity = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Radiograph visit history not found with ID: " + id));
+        entity.setReportUrl(reportUrl);
+        return mapper.toDto(repository.save(entity));
+    }
+
+    @Override
+    @Transactional
+    public RadiographVisitHistoryDTO updateTestFindings(Long visitId, Long testId,
+                                                        String findings, String impression, String recommendation) {
+        RadiographVisitHistory entity = repository.findById(visitId)
+                .orElseThrow(() -> new RuntimeException("Radiograph visit history not found with ID: " + visitId));
+        RadiographVisitTest test = entity.getTestsPerformed().stream()
+                .filter(t -> t.getId() != null && t.getId().equals(testId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Study " + testId + " not found on visit " + visitId));
+        if (findings != null) {
+            test.setFindings(findings);
+        }
+        if (impression != null) {
+            test.setImpression(impression);
+        }
+        if (recommendation != null) {
+            test.setRecommendation(recommendation);
+        }
+        test.setStatus("COMPLETED");
+        test.setReportedAt(LocalDateTime.now());
+        return mapper.toDto(repository.save(entity));
     }
 
     @Override

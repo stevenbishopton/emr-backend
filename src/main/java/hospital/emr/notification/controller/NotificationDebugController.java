@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/debug/notifications")
+@RequestMapping("/emr/debug/notifications")
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationDebugController {

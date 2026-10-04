@@ -8,6 +8,7 @@ public enum PersonnelType {
     PHARMACIST,
     LAB_PERSONNEL,
     RECEPTIONIST,
+    RADIOGRAPHER,
     SECURITY,
 
 }

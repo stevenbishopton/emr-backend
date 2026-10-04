@@ -1,6 +1,7 @@
 package hospital.emr.patient.entities;
 
 import jakarta.persistence.*;
+import jakarta.persistence.FetchType;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -21,7 +22,7 @@ public class PrescriptionChart {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "admission_id")
     private Admission admission;
 

@@ -2,9 +2,10 @@ package hospital.emr.common.controllers;
 
 import hospital.emr.common.dtos.PersonnelDTO;
 import hospital.emr.common.services.PersonnelService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +19,8 @@ public class PersonnelController {
 
     // ✅ Create Personnel
     @PostMapping
-    public ResponseEntity<PersonnelDTO> createPersonnel(@RequestBody PersonnelDTO personnelDTO) {
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<PersonnelDTO> createPersonnel(@Valid @RequestBody PersonnelDTO personnelDTO) {
         PersonnelDTO created = personnelService.createPersonnel(personnelDTO);
         return ResponseEntity.ok(created);
     }
@@ -38,9 +40,10 @@ public class PersonnelController {
 
     // ✅ Update Personnel
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<PersonnelDTO> updatePersonnel(
             @PathVariable Long id,
-            @RequestBody PersonnelDTO personnelDTO) {
+            @Valid @RequestBody PersonnelDTO personnelDTO) {
 
         PersonnelDTO updated = personnelService.updatePersonnel(id, personnelDTO);
         return ResponseEntity.ok(updated);
@@ -48,6 +51,7 @@ public class PersonnelController {
 
     // ✅ Delete Personnel
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Void> deletePersonnel(@PathVariable Long id) {
         personnelService.deletePersonnel(id);
         return ResponseEntity.noContent().build();

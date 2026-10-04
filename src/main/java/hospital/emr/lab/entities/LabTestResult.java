@@ -75,7 +75,7 @@ public class LabTestResult {
     @NotNull(message = "Status is required")
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private TestStatus status = TestStatus.PENDING;
+    private TestStatus status;
 
     /**
      * Lab technician who performed the test
@@ -92,6 +92,10 @@ public class LabTestResult {
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+
+    // ADD THIS FIELD - tracks when samples were collected
+    @Column(name = "collected_at")
+    private LocalDateTime collectedAt;
 
     /**
      * Reference to the medical history this lab test result belongs to

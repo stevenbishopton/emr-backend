@@ -1,5 +1,6 @@
 package hospital.emr.lab.dtos;
 
+import hospital.emr.lab.enums.TestStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,6 +18,7 @@ public class LabTestRequestResponseDTO {
     private Long medicalHistoryId;
     private List<Long> labTestIds;
     private String requestedBy;
+    private TestStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String comments;

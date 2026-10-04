@@ -14,5 +14,6 @@ public enum SampleType {
     SERUM,
     PLASMA,
     SKIN,
-    BREATH
+    BREATH,
+    OTHER
 }

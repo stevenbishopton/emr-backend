@@ -33,6 +33,15 @@ public class VitalSignsService {
     private final VisitRepository visitRepository;
 
     /**
+     * Get all vital signs records.
+     */
+    public List<VitalSignsDTO> getAllVitalSigns() {
+        return vitalSignsRepository.findAll().stream()
+                .map(vitalSignsMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Record new vital signs for a patient.
      */
     @Transactional
@@ -55,7 +64,10 @@ public class VitalSignsService {
             throw new MedicalHistoryNotFoundException("No medical history found for patient " + patient.getId());
         }
 
-        entity.setTimeTaken(LocalDateTime.now());
+        // Use user-provided timeTaken if available, otherwise use current time
+        if (entity.getTimeTaken() == null) {
+            entity.setTimeTaken(LocalDateTime.now());
+        }
         VitalSigns saved = vitalSignsRepository.save(entity);
 
         return vitalSignsMapper.toDto(saved);

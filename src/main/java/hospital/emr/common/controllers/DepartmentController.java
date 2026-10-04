@@ -3,9 +3,11 @@ package hospital.emr.common.controllers;
 import hospital.emr.common.dtos.DepartmentDTO;
 import hospital.emr.common.exceptions.DepartmentNotFoundException;
 import hospital.emr.common.services.DepartmentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +20,8 @@ public class DepartmentController {
     private final DepartmentService departmentService;
 
     @PostMapping
-    public ResponseEntity<DepartmentDTO> createDepartment(@RequestBody DepartmentDTO departmentDTO) {
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<DepartmentDTO> createDepartment(@Valid @RequestBody DepartmentDTO departmentDTO) {
         DepartmentDTO createdDepartment = departmentService.createDepartment(departmentDTO);
         return new ResponseEntity<>(createdDepartment, HttpStatus.CREATED);
     }
@@ -40,7 +43,8 @@ public class DepartmentController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<DepartmentDTO> updateDepartment(@PathVariable Long id, @RequestBody DepartmentDTO departmentDTO) {
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<DepartmentDTO> updateDepartment(@PathVariable Long id, @Valid @RequestBody DepartmentDTO departmentDTO) {
         try {
             DepartmentDTO updatedDepartment = departmentService.updateDepartment(id, departmentDTO);
             return ResponseEntity.ok(updatedDepartment);
@@ -50,6 +54,7 @@ public class DepartmentController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Void> deleteDepartment(@PathVariable Long id) {
         try {
             departmentService.deleteDepartment(id);

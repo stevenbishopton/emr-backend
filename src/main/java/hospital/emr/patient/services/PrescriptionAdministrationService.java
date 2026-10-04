@@ -26,6 +26,10 @@ public class PrescriptionAdministrationService {
 
     @Transactional
     public PrescriptionAdministrationDTO createAdministration(PrescriptionAdministrationDTO administrationDTO) {
+        if (administrationDTO.getAdministrationDate() == null || administrationDTO.getAdministrationTime() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "administrationDate and administrationTime are required");
+        }
         AdmissionPrescriptionEntry entry = admissionPrescriptionEntryRepository.findById(administrationDTO.getPrescriptionEntryId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Prescription entry not found with ID: " + administrationDTO.getPrescriptionEntryId()));
@@ -42,12 +46,18 @@ public class PrescriptionAdministrationService {
             // Update existing administration
             PrescriptionAdministration admin = existingAdmin.get();
             administrationMapper.updateEntityFromDto(administrationDTO, admin);
+            if (admin.getAdministered() == null) {
+                admin.setAdministered(true);
+            }
             PrescriptionAdministration saved = prescriptionAdministrationRepository.save(admin);
             return administrationMapper.toDto(saved);
         } else {
             // Create new administration
             PrescriptionAdministration administration = administrationMapper.toEntity(administrationDTO);
             administration.setPrescriptionEntry(entry);
+            if (administration.getAdministered() == null) {
+                administration.setAdministered(true);
+            }
             PrescriptionAdministration saved = prescriptionAdministrationRepository.save(administration);
             return administrationMapper.toDto(saved);
         }

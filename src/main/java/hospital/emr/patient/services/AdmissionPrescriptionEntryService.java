@@ -4,6 +4,9 @@ import hospital.emr.patient.dtos.AdmissionPrescriptionEntryDTO;
 import hospital.emr.patient.entities.AdmissionPrescriptionEntry;
 import hospital.emr.patient.mapper.AdmissionPrescriptionEntryMapper;
 import hospital.emr.patient.repos.AdmissionPrescriptionEntryRepository;
+import hospital.emr.pharmacy.entities.Item;
+import hospital.emr.pharmacy.exceptions.ItemNotFoundException;
+import hospital.emr.pharmacy.repos.ItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,6 +21,7 @@ import java.util.stream.Collectors;
 public class AdmissionPrescriptionEntryService {
     private final AdmissionPrescriptionEntryRepository admissionPrescriptionEntryRepository;
     private final AdmissionPrescriptionEntryMapper admissionPrescriptionEntryMapper;
+    private final ItemRepository itemRepository;
 
 //    public AdmissionPrescriptionEntryDTO createPrescriptionEntry(AdmissionPrescriptionEntryDTO dto) {
 //        AdmissionPrescriptionEntry entity = admissionPrescriptionEntryMapper.toEntity(dto);
@@ -28,6 +32,14 @@ public class AdmissionPrescriptionEntryService {
     public List<AdmissionPrescriptionEntryDTO> createPrescriptionEntries(List<AdmissionPrescriptionEntryDTO> dtos) {
         List<AdmissionPrescriptionEntry> entities = dtos.stream()
                 .map(admissionPrescriptionEntryMapper::toEntity)
+                .peek(entry -> {
+                    // Set itemName from itemId if not already set
+                    if (entry.getItemId() != null && (entry.getItemName() == null || entry.getItemName().trim().isEmpty())) {
+                        Item item = itemRepository.findById(entry.getItemId())
+                                .orElseThrow(() -> new ItemNotFoundException("Item not found with ID: " + entry.getItemId()));
+                        entry.setItemName(item.getName());
+                    }
+                })
                 .collect(Collectors.toList());
         List<AdmissionPrescriptionEntry> savedEntities = admissionPrescriptionEntryRepository.saveAll(entities);
         return savedEntities.stream()

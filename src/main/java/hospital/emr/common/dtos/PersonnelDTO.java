@@ -1,5 +1,6 @@
 package hospital.emr.common.dtos;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import hospital.emr.common.enums.PersonnelType;
 import hospital.emr.common.enums.Sex;
 import jakarta.validation.constraints.NotNull;
@@ -28,7 +29,7 @@ public class PersonnelDTO {
     @NotNull
     private String username;
 
-    @NotNull
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @NotNull

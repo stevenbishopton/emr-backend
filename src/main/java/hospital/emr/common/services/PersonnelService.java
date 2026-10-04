@@ -2,6 +2,7 @@ package hospital.emr.common.services;
 
 import hospital.emr.common.dtos.PersonnelDTO;
 import hospital.emr.common.entities.*;
+import hospital.emr.common.enums.PersonnelType;
 import hospital.emr.common.exceptions.PersonnelNotFoundException;
 import hospital.emr.common.mappers.PersonnelMapper;
 import hospital.emr.common.repos.PersonnelRepository;
@@ -9,7 +10,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,10 +24,14 @@ public class PersonnelService {
     private final PersonnelRepository personnelRepository;
     private final PersonnelMapper personnelMapper;
     private final PasswordEncoder passwordEncoder;
+    private final EntityManager entityManager;
 
     // ✅ Create Personnel
     public PersonnelDTO createPersonnel(PersonnelDTO dto) {
         log.info("Creating personnel");
+        if (dto.getPassword() == null || dto.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Password is required when creating personnel");
+        }
         Personnel personnel = personnelMapper.toEntity(dto);
         personnel.setPassword(passwordEncoder.encode(dto.getPassword()));
         Personnel saved = personnelRepository.save(personnel);
@@ -50,10 +57,41 @@ public class PersonnelService {
     }
 
     // ✅ Update
+    @Transactional
     public PersonnelDTO updatePersonnel(Long id, PersonnelDTO dto) {
         Personnel existing = personnelRepository.findById(id)
                 .orElseThrow(() -> new PersonnelNotFoundException("Personnel not found with id " + id));
 
+        // Check if personnel type is changing
+        PersonnelType existingType = personnelMapper.toDto(existing).getPersonnelType();
+        PersonnelType newType = dto.getPersonnelType();
+
+        if (existingType != newType) {
+            log.info("Personnel type changing from {} to {}, recreating entity", existingType, newType);
+            
+            // Delete old entity
+            personnelRepository.delete(existing);
+            personnelRepository.flush();
+            
+            // Clear persistence context to avoid conflicts
+            entityManager.clear();
+            
+            // Create new entity with new type
+            Personnel newEntity = personnelMapper.toEntity(dto);
+            
+            // Copy common fields from old entity that might not be in DTO
+            newEntity.setId(id); // Keep same ID
+            if (dto.getPassword() == null || dto.getPassword().isBlank()) {
+                newEntity.setPassword(existing.getPassword());
+            } else {
+                newEntity.setPassword(passwordEncoder.encode(dto.getPassword()));
+            }
+            
+            Personnel updated = personnelRepository.save(newEntity);
+            return personnelMapper.toDto(updated);
+        }
+
+        // Normal update - same type
         personnelMapper.updateFromDto(dto, existing);
 
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {

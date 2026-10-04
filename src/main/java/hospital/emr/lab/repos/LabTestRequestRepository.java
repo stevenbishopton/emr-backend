@@ -1,6 +1,7 @@
 package hospital.emr.lab.repos;
 
 import hospital.emr.lab.entities.LabTestRequest;
+import hospital.emr.lab.enums.TestStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,10 +15,9 @@ public interface LabTestRequestRepository extends JpaRepository<LabTestRequest, 
     List<LabTestRequest> findByVisitId(Long visitId);
     List<LabTestRequest> findByMedicalHistoryId(Long medicalHistoryId);
     List<LabTestRequest> findByRequestedBy(String requestedBy);
+    List<LabTestRequest> findByStatus(TestStatus status);
 
-    // FIX: Use native query for JSON array search
-    @Query(value = "SELECT * FROM lab_test_request l WHERE JSON_CONTAINS(l.lab_test_ids, :testId) OR l.lab_test_ids LIKE CONCAT('%\"', :testId, '\"%')",
-            nativeQuery = true)
+    @Query("SELECT l FROM LabTestRequest l WHERE :testId MEMBER OF l.labTestIds")
     List<LabTestRequest> findByLabTestId(@Param("testId") Long testId);
 
     @Query("SELECT l FROM LabTestRequest l WHERE l.patientId = :patientId AND l.visitId = :visitId")

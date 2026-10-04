@@ -9,14 +9,17 @@ import hospital.emr.doctor.entities.Doctor;
 import hospital.emr.nurse.entities.Nurse;
 import hospital.emr.pharmacy.entities.Pharmacist;
 import hospital.emr.reception.entities.Receptionist;
+import hospital.emr.radiograph.entities.Radiographer;
+import hospital.emr.lab.entities.LabPersonnel;
 import org.mapstruct.*;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PersonnelMapper {
 
-    // Convert Entity -> DTO
+    // Convert Entity -> DTO (never expose the password hash)
     @Mapping(target = "personnelType", expression = "java(determinePersonnelType(entity))")
     @Mapping(target = "departmentId", source = "department.id")
+    @Mapping(target = "password", ignore = true)
     PersonnelDTO toDto(Personnel entity);
 
     // Convert DTO -> Entity (delegate to factory)
@@ -39,7 +42,8 @@ public interface PersonnelMapper {
         if (entity instanceof Nurse) return PersonnelType.NURSE;
         if (entity instanceof Pharmacist) return PersonnelType.PHARMACIST;
         if (entity instanceof Receptionist) return PersonnelType.RECEPTIONIST;
-//        if (entity instanceof LabPersonnel) return PersonnelType.LAB_PERSONNEL;
+        if (entity instanceof LabPersonnel) return PersonnelType.LAB_PERSONNEL;
+        if (entity instanceof Radiographer) return PersonnelType.RADIOGRAPHER;
         return null;
     }
 
@@ -56,7 +60,8 @@ public interface PersonnelMapper {
             case NURSE -> new Nurse();
             case PHARMACIST -> new Pharmacist();
             case RECEPTIONIST -> new Receptionist();
-//            case LAB_PERSONNEL -> new LabPersonnel();
+            case LAB_PERSONNEL -> new LabPersonnel();
+            case RADIOGRAPHER ->    new Radiographer();
             default -> throw new IllegalArgumentException("Unknown PersonnelType: " + dto.getPersonnelType());
         };
     }

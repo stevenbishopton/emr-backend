@@ -1,5 +1,6 @@
 package hospital.emr.radiograph.controllers;
 
+import hospital.emr.common.storage.FileStorageService;
 import hospital.emr.radiograph.dtos.RadiographVisitHistoryDTO;
 import hospital.emr.radiograph.enums.RadiographStatus;
 import hospital.emr.radiograph.services.RadiographVisitHistoryService;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
@@ -26,12 +28,14 @@ import java.util.List;
 public class RadiographVisitHistoryController {
 
     private final RadiographVisitHistoryService visitHistoryService;
+    private final FileStorageService fileStorageService;
 
     // CRUD operations
     @PostMapping
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_RADIOGRAPHER', 'ROLE_DOCTOR')")
     public ResponseEntity<RadiographVisitHistoryDTO> createVisitHistory(@Valid @RequestBody RadiographVisitHistoryDTO dto) {
-        log.info("Creating radiograph visit history for patient: {}", dto.getPatient().getFullName());
+        log.info("Creating radiograph visit history for patient id: {}",
+                dto.getPatient() != null ? dto.getPatient().getId() : null);
         RadiographVisitHistoryDTO created = visitHistoryService.createVisitHistory(dto);
         return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
@@ -281,6 +285,38 @@ public class RadiographVisitHistoryController {
         return ResponseEntity.ok(updated);
     }
 
+    @PostMapping("/{id}/images")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_RADIOGRAPHER', 'ROLE_RADIOLOGIST')")
+    public ResponseEntity<RadiographVisitHistoryDTO> uploadImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        String url = fileStorageService.store(file, "radiographs/" + id + "/images");
+        log.info("Stored radiograph image for visit {} at {}", id, url);
+        return ResponseEntity.ok(visitHistoryService.attachImage(id, url));
+    }
+
+    @PostMapping("/{id}/report-file")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_RADIOGRAPHER', 'ROLE_RADIOLOGIST')")
+    public ResponseEntity<RadiographVisitHistoryDTO> uploadReportFile(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        String url = fileStorageService.store(file, "radiographs/" + id + "/reports");
+        log.info("Stored radiograph report for visit {} at {}", id, url);
+        return ResponseEntity.ok(visitHistoryService.attachReport(id, url));
+    }
+
+    @PutMapping("/{id}/tests/{testId}/findings")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_RADIOGRAPHER', 'ROLE_RADIOLOGIST')")
+    public ResponseEntity<RadiographVisitHistoryDTO> updateTestFindings(
+            @PathVariable Long id,
+            @PathVariable Long testId,
+            @RequestBody FindingsRequest request) {
+        log.info("Updating findings for study {} on visit {}", testId, id);
+        RadiographVisitHistoryDTO updated = visitHistoryService.updateTestFindings(
+                id, testId, request.getFindings(), request.getImpression(), request.getRecommendation());
+        return ResponseEntity.ok(updated);
+    }
+
     // DTOs for request bodies
     public static class StatusUpdateRequest {
         private RadiographStatus newStatus;
@@ -316,5 +352,18 @@ public class RadiographVisitHistoryController {
         public void setNotes(String notes) { this.notes = notes; }
         public Long getTechnicianId() { return technicianId; }
         public void setTechnicianId(Long technicianId) { this.technicianId = technicianId; }
+    }
+
+    public static class FindingsRequest {
+        private String findings;
+        private String impression;
+        private String recommendation;
+
+        public String getFindings() { return findings; }
+        public void setFindings(String findings) { this.findings = findings; }
+        public String getImpression() { return impression; }
+        public void setImpression(String impression) { this.impression = impression; }
+        public String getRecommendation() { return recommendation; }
+        public void setRecommendation(String recommendation) { this.recommendation = recommendation; }
     }
 }

@@ -1,5 +1,6 @@
 package hospital.emr.lab.dtos;
 
+import hospital.emr.lab.enums.TestStatus;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -32,4 +33,7 @@ public class CreateLabTestResultRequest {
     private String comments;
 
     private String carriedOutBy;
+
+    // ADD THIS FIELD - allows frontend to specify status
+    private TestStatus status;
 }

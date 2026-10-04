@@ -61,6 +61,14 @@ public interface RadiographVisitHistoryService {
     RadiographVisitHistoryDTO addRadiologistReport(Long id, String report, Long radiologistId);
     RadiographVisitHistoryDTO addTechnicianNotes(Long id, String notes, Long technicianId);
 
+    // Attachment operations
+    RadiographVisitHistoryDTO attachImage(Long id, String imageUrl);
+    RadiographVisitHistoryDTO attachReport(Long id, String reportUrl);
+
+    // Per-study reporting
+    RadiographVisitHistoryDTO updateTestFindings(Long visitId, Long testId,
+                                                 String findings, String impression, String recommendation);
+
     // Utility operations
     boolean existsById(Long id);
     boolean existsByVisitId(Long visitId);

@@ -86,6 +86,8 @@ public class PrescriptionService {
         entry.setDurationDays(entryDTO.getDurationDays());
         entry.setItem(persistentItem);
         entry.setPrescription(prescription);
+        // Set itemName from the persistent item to ensure it's always populated
+        entry.setItemName(persistentItem.getName());
         return entry;
     }
 

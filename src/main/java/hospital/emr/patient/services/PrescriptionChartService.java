@@ -3,12 +3,17 @@ package hospital.emr.patient.services;
 import hospital.emr.patient.dtos.AdmissionPrescriptionEntryDTO;
 import hospital.emr.patient.dtos.PrescriptionCellUpdateDTO;
 import hospital.emr.patient.dtos.PrescriptionChartDTO;
+import hospital.emr.patient.entities.Admission;
 import hospital.emr.patient.entities.AdmissionPrescriptionEntry;
 import hospital.emr.patient.entities.PrescriptionChart;
 import hospital.emr.patient.mapper.AdmissionPrescriptionEntryMapper;
 import hospital.emr.patient.mapper.PrescriptionChartMapper;
 import hospital.emr.patient.repos.AdmissionPrescriptionEntryRepository;
+import hospital.emr.patient.repos.AdmissionRepository;
 import hospital.emr.patient.repos.PrescriptionChartRepository;
+import hospital.emr.pharmacy.entities.Item;
+import hospital.emr.pharmacy.exceptions.ItemNotFoundException;
+import hospital.emr.pharmacy.repos.ItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,6 +30,8 @@ public class PrescriptionChartService {
     private final AdmissionPrescriptionEntryRepository admissionPrescriptionEntryRepository;
     private final AdmissionPrescriptionEntryMapper entryMapper;
     private final PrescriptionChartMapper chartMapper;
+    private final ItemRepository itemRepository;
+    private final AdmissionRepository admissionRepository;
 
     // Cell update method for spreadsheet editing
     @Transactional
@@ -54,31 +61,51 @@ public class PrescriptionChartService {
 
     @Transactional
     public AdmissionPrescriptionEntryDTO addEntryToChart(AdmissionPrescriptionEntryDTO entryDTO) {
-        PrescriptionChart chart = prescriptionChartRepository.findByAdmissionId(entryDTO.getAdmissionId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "No prescription chart found for admission ID: " + entryDTO.getAdmissionId()));
+        PrescriptionChart chart = getOrCreateChart(entryDTO.getAdmissionId());
 
         AdmissionPrescriptionEntry entry = entryMapper.toEntity(entryDTO);
+        entry.setId(null);
         entry.setChart(chart);
 
-        // Initialize entries list if null
+        // Set itemName from itemId if not already set
+        if (entry.getItemId() != null && (entry.getItemName() == null || entry.getItemName().trim().isEmpty())) {
+            Item item = itemRepository.findById(entry.getItemId())
+                    .orElseThrow(() -> new ItemNotFoundException("Item not found with ID: " + entry.getItemId()));
+            entry.setItemName(item.getName());
+        }
+
+        // Persist the entry explicitly so an id is assigned even before the chart flush
+        AdmissionPrescriptionEntry savedEntry = admissionPrescriptionEntryRepository.save(entry);
+
         if (chart.getEntries() == null) {
             chart.setEntries(new ArrayList<>());
         }
-
-        chart.getEntries().add(entry);
+        if (chart.getEntries().stream().noneMatch(e -> e.getId() != null && e.getId().equals(savedEntry.getId()))) {
+            chart.getEntries().add(savedEntry);
+        }
         chart.setUpdatedAt(LocalDateTime.now());
-
-        PrescriptionChart savedChart = prescriptionChartRepository.save(chart);
-
-        // Find the saved entry to return with ID
-        AdmissionPrescriptionEntry savedEntry = savedChart.getEntries().stream()
-                .filter(e -> e.getItemName().equals(entry.getItemName()) &&
-                        e.getInstructions().equals(entry.getInstructions()))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Failed to save prescription entry"));
+        prescriptionChartRepository.save(chart);
 
         return entryMapper.toDto(savedEntry);
+    }
+
+    private PrescriptionChart getOrCreateChart(Long admissionId) {
+        if (admissionId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "admissionId is required");
+        }
+        return prescriptionChartRepository.findByAdmissionId(admissionId)
+                .orElseGet(() -> {
+                    Admission admission = admissionRepository.findById(admissionId)
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                    "Admission not found with ID: " + admissionId));
+                    PrescriptionChart newChart = PrescriptionChart.builder()
+                            .admission(admission)
+                            .entries(new ArrayList<>())
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .build();
+                    return prescriptionChartRepository.save(newChart);
+                });
     }
 
     @Transactional(readOnly = true)

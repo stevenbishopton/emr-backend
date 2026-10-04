@@ -1,5 +1,6 @@
 package hospital.emr.lab.entities;
 
+import hospital.emr.lab.enums.TestStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -34,7 +35,13 @@ public class LabTestRequest {
             joinColumns = @JoinColumn(name = "lab_test_request_id"))
     @Column(name = "lab_test_id")
     private List<Long> labTestIds = new ArrayList<>();
+    
+    @Column(length = 255)
     private String requestedBy;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private TestStatus status = TestStatus.PENDING;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -42,6 +49,7 @@ public class LabTestRequest {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Column(columnDefinition = "TEXT")
     private String comments;
 
 }

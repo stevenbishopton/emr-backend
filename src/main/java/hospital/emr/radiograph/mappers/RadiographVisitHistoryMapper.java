@@ -64,8 +64,8 @@ public interface RadiographVisitHistoryMapper {
         dto.setFirstName(patient.getNames());
         dto.setLastName("");
         dto.setFullName(patient.getNames());
-        dto.setDateOfBirth(patient.getDateOfBirth().toString());
-        dto.setSex(patient.getSex().toString());
+        dto.setDateOfBirth(patient.getDateOfBirth() != null ? patient.getDateOfBirth().toString() : null);
+        dto.setSex(patient.getSex() != null ? patient.getSex().toString() : null);
         dto.setPhoneNumber(patient.getPhoneNumber());
         return dto;
     }
@@ -76,7 +76,7 @@ public interface RadiographVisitHistoryMapper {
         RadiographVisitHistoryDTO.VisitDTO dto = new RadiographVisitHistoryDTO.VisitDTO();
         dto.setId(visit.getId());
         dto.setVisitDate(visit.getVisitDateTime());
-        dto.setVisitType(visit.getStatus().toString());
+        dto.setVisitType(visit.getStatus() != null ? visit.getStatus().toString() : null);
         dto.setComplaint(visit.getNotes());
         return dto;
     }

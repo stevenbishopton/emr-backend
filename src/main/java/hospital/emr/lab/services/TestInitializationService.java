@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class TestInitializationService {
     private final LabTestRepository labTestRepository;
 
     @Bean
+    @Order(1)
     @Transactional
     public CommandLineRunner initializeLabTests() {
         return args -> {

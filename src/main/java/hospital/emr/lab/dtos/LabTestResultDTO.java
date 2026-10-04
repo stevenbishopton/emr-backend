@@ -28,5 +28,6 @@ public class LabTestResultDTO {
     private String carriedOutBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime collectedAt;
     private LocalDateTime completedAt;
 }

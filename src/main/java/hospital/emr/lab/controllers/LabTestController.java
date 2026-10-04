@@ -1,8 +1,10 @@
 package hospital.emr.lab.controllers;
 
+import hospital.emr.lab.dtos.LabAnalyteTemplateDTO;
 import hospital.emr.lab.dtos.LabTestDTO;
 import hospital.emr.lab.enums.SampleType;
 import hospital.emr.lab.enums.TestCategory;
+import hospital.emr.lab.services.LabAnalyteTemplateService;
 import hospital.emr.lab.services.LabTestRegistryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,6 +23,7 @@ import java.util.List;
 public class LabTestController {
 
     private final LabTestRegistryService testRegistryService;
+    private final LabAnalyteTemplateService analyteTemplateService;
 
     /**
      * Get all available lab tests
@@ -70,5 +73,13 @@ public class LabTestController {
             @PathVariable TestCategory category,
             @PathVariable SampleType sampleType) {
         return ResponseEntity.ok(testRegistryService.getTestsByCategoryAndSampleType(category, sampleType));
+    }
+
+    /**
+     * Get the analyte template (analytes, units, reference ranges) for a test
+     */
+    @GetMapping("/{id}/analytes")
+    public ResponseEntity<List<LabAnalyteTemplateDTO>> getAnalyteTemplates(@PathVariable Long id) {
+        return ResponseEntity.ok(analyteTemplateService.getForTest(id));
     }
 }

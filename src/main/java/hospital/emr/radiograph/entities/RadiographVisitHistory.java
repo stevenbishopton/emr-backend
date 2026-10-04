@@ -80,7 +80,7 @@ public class RadiographVisitHistory {
 
     // List of radiograph tests performed during this visit
     @OneToMany(mappedBy = "visitHistory", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<RadiographVisitTest> testsPerformed;
+    private List<RadiographVisitTest> testsPerformed = new java.util.ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

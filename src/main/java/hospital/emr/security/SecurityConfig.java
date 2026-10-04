@@ -39,42 +39,38 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable()) // Crucial for POST requests
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-
-                        // ✅ ALWAYS allow preflight
+                        // 1. Preflight OPTIONS requests must be allowed
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Public endpoints
-                        .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers("/emr/auth/**").permitAll()
-                        .requestMatchers("/emr/departments").permitAll()
-                        .requestMatchers("/emr/personnel").permitAll()
+                        // 2. Only the login endpoint is public. Registration is admin-only
+                        //    (enforced by @PreAuthorize on AuthController#register).
+                        .requestMatchers(HttpMethod.POST, "/auth/login", "/emr/auth/login").permitAll()
 
-                        // ✅ ADD THIS: Nursing Reports endpoints (public for now)
-                        .requestMatchers("/emr/nursing-reports/**").permitAll()
+                        // 3. Static/Documentation
+                        .requestMatchers("/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        // Swagger
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/swagger-resources/**",
-                                "/webjars/**"
-                        ).permitAll()
+                        // 3b. Uploaded files (radiograph images/reports) served to browsers
+                        .requestMatchers("/uploads/**").permitAll()
 
-                        // WebSockets
-                        .requestMatchers("/ws/**", "/emr/ws/**", "/topic/**", "/queue/**", "/app/**", "/user/**").permitAll()
+                        // 4. Department/Personnel reads require authentication; mutations are
+                        //    restricted to ROLE_ADMIN via @PreAuthorize on the controllers.
+                        .requestMatchers("/departments", "/emr/departments/**").authenticated()
+                        .requestMatchers("/personnel", "/emr/personnel/**").authenticated()
 
-                        // Everything else
+                        // 5. WebSockets (both with and without /emr prefix)
+                        .requestMatchers("/ws/**", "/emr/ws/**").permitAll()
+
+                        // 6. Notifications (public for inter-department messaging)
+                        .requestMatchers("/emr/notifications/**", "/emr/debug/**").permitAll()
+
+                        // 7. Secure everything else
                         .anyRequest().authenticated()
                 )
-
-                .headers(headers -> headers
-                        .frameOptions(frame -> frame.sameOrigin())
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .authenticationProvider(daoAuthenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -102,19 +98,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
-        // Specific origins for better compatibility
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "http://localhost:8080",
-                "http://127.0.0.1:8080",
-                "http://192.168.1.247:5173"
-        ));
-
+        // Use setAllowedOriginPatterns with "*" when allowCredentials is true
+        config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+        config.setExposedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 

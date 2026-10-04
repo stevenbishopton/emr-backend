@@ -8,7 +8,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/notifications/department")
+@RequestMapping("/emr/notifications/department")
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationController {

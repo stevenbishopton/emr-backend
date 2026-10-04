@@ -41,6 +41,7 @@ public class Radiograph {
 
     private String carriedOutBy;
 
+    @Column(columnDefinition = "TEXT")
     private String interpretation;
 
     private String comments;

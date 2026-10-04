@@ -16,6 +16,11 @@ public class VitalSignsController {
 
     private final VitalSignsService vitalSignsService;
 
+    @GetMapping()
+    public ResponseEntity<List<VitalSignsDTO>> getAllVitalSigns() {
+        return ResponseEntity.ok(vitalSignsService.getAllVitalSigns());
+    }
+
     @PostMapping()
     public ResponseEntity<VitalSignsDTO> recordVitalSigns(@RequestBody VitalSignsDTO dto) {
         return ResponseEntity.ok(vitalSignsService.recordVitalSigns(dto));

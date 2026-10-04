@@ -29,6 +29,8 @@ public abstract class Personnel {
 
     private String image;
 
+    @Column(name = "sex")
+    @Enumerated(EnumType.STRING)
     private Sex sex;
 
     @Column(name = "phone_number", nullable = false)
