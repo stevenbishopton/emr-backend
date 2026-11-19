@@ -7,8 +7,11 @@ import hospital.emr.patient.entities.PrescriptionEntry;
 import hospital.emr.patient.exceptions.MedicalHistoryNotFoundException;
 import hospital.emr.patient.exceptions.PrescriptionNotFoundException;
 import hospital.emr.patient.mapper.PrescriptionMapper;
+import hospital.emr.patient.mapper.PrescriptionEntryMapper;
 import hospital.emr.patient.repos.MedicalHistoryRepository;
 import hospital.emr.patient.repos.PrescriptionRepository;
+import hospital.emr.patient.repos.PrescriptionEntryRepository;
+import hospital.emr.patient.repos.MedicationAdministrationRepository;
 import hospital.emr.pharmacy.entities.Item;
 import hospital.emr.pharmacy.exceptions.ItemNotFoundException;
 import hospital.emr.pharmacy.repos.ItemRepository;
@@ -19,6 +22,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,9 +33,77 @@ public class PrescriptionService {
 
     private final PrescriptionRepository prescriptionRepository;
     private final PrescriptionMapper prescriptionMapper;
+    private final PrescriptionEntryMapper prescriptionEntryMapper;
+    private final PrescriptionEntryRepository prescriptionEntryRepository;
+    private final MedicationAdministrationRepository medicationAdministrationRepository;
     private final ItemRepository itemRepository;
     private final MedicalHistoryRepository medicalHistoryRepository;
     private final VisitRepository visitRepository;
+
+    /**
+     * Append a single medication to the medical history's medication chart.
+     * Creates the chart (prescription) if the patient has none yet. Used by the
+     * Medication Administration Record so the MAR and the doctor's prescription
+     * list share exactly the same entries.
+     */
+    @Transactional
+    public PrescriptionEntryDTO addEntryToMedicalHistory(Long medicalHistoryId, PrescriptionEntryDTO entryDTO) {
+        var medicalHistory = medicalHistoryRepository.findById(medicalHistoryId)
+                .orElseThrow(() -> new MedicalHistoryNotFoundException(
+                        "Medical History not found with ID: " + medicalHistoryId));
+
+        Prescription prescription = prescriptionRepository.findAllByMedicalHistoryId(medicalHistoryId).stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getIsDischarge()))
+                .max(Comparator.comparing(Prescription::getCreatedAt,
+                        Comparator.nullsFirst(Comparator.naturalOrder())))
+                .orElse(null);
+
+        if (prescription == null) {
+            prescription = new Prescription();
+            prescription.setMedicalHistory(medicalHistory);
+            prescription.setIsDischarge(false);
+            prescription.setAdditionalInstructions("Inpatient medication chart");
+            prescription.setPrescriptionEntries(new ArrayList<>());
+        }
+        if (prescription.getPrescriptionEntries() == null) {
+            prescription.setPrescriptionEntries(new ArrayList<>());
+        }
+
+        PrescriptionEntry entry = new PrescriptionEntry();
+        entry.setItemName(entryDTO.getItemName());
+        entry.setDosage(entryDTO.getDosage());
+        entry.setRoute(entryDTO.getRoute());
+        if (entryDTO.getDurationDays() != null) {
+            entry.setDurationDays(entryDTO.getDurationDays());
+        }
+        entry.setPrescription(prescription);
+        prescription.getPrescriptionEntries().add(entry);
+
+        Prescription saved = prescriptionRepository.save(prescription);
+        PrescriptionEntry savedEntry = saved.getPrescriptionEntries()
+                .get(saved.getPrescriptionEntries().size() - 1);
+        return prescriptionEntryMapper.toDto(savedEntry);
+    }
+
+    @Transactional
+    public PrescriptionEntryDTO updateEntry(Long entryId, PrescriptionEntryDTO dto) {
+        PrescriptionEntry entry = prescriptionEntryRepository.findById(entryId)
+                .orElseThrow(() -> new PrescriptionNotFoundException("Medication not found with ID: " + entryId));
+        if (dto.getItemName() != null) entry.setItemName(dto.getItemName());
+        if (dto.getDosage() != null) entry.setDosage(dto.getDosage());
+        if (dto.getRoute() != null) entry.setRoute(dto.getRoute());
+        if (dto.getDurationDays() != null) entry.setDurationDays(dto.getDurationDays());
+        return prescriptionEntryMapper.toDto(prescriptionEntryRepository.save(entry));
+    }
+
+    @Transactional
+    public void deleteEntry(Long entryId) {
+        PrescriptionEntry entry = prescriptionEntryRepository.findById(entryId)
+                .orElseThrow(() -> new PrescriptionNotFoundException("Medication not found with ID: " + entryId));
+        medicationAdministrationRepository.deleteByPrescriptionEntry(entry);
+        prescriptionEntryRepository.delete(entry);
+    }
+
 
     @Transactional
     public PrescriptionDTO createPrescription(PrescriptionDTO prescriptionDTO) {

@@ -11,6 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
 @AllArgsConstructor
 @Service
 public class ItemService {
@@ -59,5 +63,48 @@ public class ItemService {
         itemRepository.deleteById(id);
     }
 
-    // Add pharmacist-related methods as needed
+    // --- Inventory expiry & stock health ---
+
+    @Transactional(readOnly = true)
+    public List<ItemDTO> getExpiredItems() {
+        return itemRepository.findExpiredItems().stream()
+                .map(ItemMapper::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ItemDTO> getExpiringItems(int days) {
+        LocalDate today = LocalDate.now();
+        LocalDate future = today.plusDays(Math.max(days, 0));
+        return itemRepository.findItemsExpiringSoon(future).stream()
+                .filter(i -> i.getExpirationDate() != null
+                        && !i.getExpirationDate().isBefore(today))
+                .map(ItemMapper::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ItemDTO> getLowStockItems(BigDecimal threshold) {
+        BigDecimal limit = threshold != null ? threshold : BigDecimal.TEN;
+        return itemRepository.findItemsWithLowStock(limit).stream()
+                .map(ItemMapper::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public InventorySummaryDTO getInventorySummary(BigDecimal threshold, int expiringDays) {
+        BigDecimal limit = threshold != null ? threshold : BigDecimal.TEN;
+        int window = expiringDays > 0 ? expiringDays : 30;
+
+        InventorySummaryDTO summary = new InventorySummaryDTO();
+        summary.setTotalItems(itemRepository.count());
+        summary.setExpiredItems(itemRepository.countExpiredItems());
+        summary.setExpiringSoonItems(getExpiringItems(window).size());
+        summary.setLowStockItems(itemRepository.countItemsWithLowStock(limit));
+        summary.setOutOfStockItems(itemRepository.findItemsWithZeroStock().size());
+        summary.setTotalStockValue(itemRepository.totalStockValue());
+        summary.setExpiringWindowDays(window);
+        summary.setLowStockThreshold(limit);
+        return summary;
+    }
 }

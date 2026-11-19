@@ -66,29 +66,30 @@ public class PersonnelService {
         PersonnelType existingType = personnelMapper.toDto(existing).getPersonnelType();
         PersonnelType newType = dto.getPersonnelType();
 
-        if (existingType != newType) {
-            log.info("Personnel type changing from {} to {}, recreating entity", existingType, newType);
-            
-            // Delete old entity
-            personnelRepository.delete(existing);
-            personnelRepository.flush();
-            
-            // Clear persistence context to avoid conflicts
-            entityManager.clear();
-            
-            // Create new entity with new type
-            Personnel newEntity = personnelMapper.toEntity(dto);
-            
-            // Copy common fields from old entity that might not be in DTO
-            newEntity.setId(id); // Keep same ID
-            if (dto.getPassword() == null || dto.getPassword().isBlank()) {
-                newEntity.setPassword(existing.getPassword());
-            } else {
-                newEntity.setPassword(passwordEncoder.encode(dto.getPassword()));
+        if (newType != null && existingType != newType) {
+            log.info("Personnel type changing from {} to {}, updating discriminator", existingType, newType);
+
+            // Update the shared columns on the existing row first (keeps the same id
+            // and any foreign keys pointing at this personnel record).
+            personnelMapper.updateFromDto(dto, existing);
+            if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+                existing.setPassword(passwordEncoder.encode(dto.getPassword()));
             }
-            
-            Personnel updated = personnelRepository.save(newEntity);
-            return personnelMapper.toDto(updated);
+            personnelRepository.save(existing);
+            personnelRepository.flush();
+
+            // Flip the SINGLE_TABLE discriminator so the row is read back as the new subtype.
+            entityManager
+                    .createNativeQuery("UPDATE personnel SET personnel_type = :type WHERE id = :id")
+                    .setParameter("type", newType.name())
+                    .setParameter("id", id)
+                    .executeUpdate();
+
+            entityManager.clear();
+
+            Personnel reloaded = personnelRepository.findById(id)
+                    .orElseThrow(() -> new PersonnelNotFoundException("Personnel not found with id " + id));
+            return personnelMapper.toDto(reloaded);
         }
 
         // Normal update - same type

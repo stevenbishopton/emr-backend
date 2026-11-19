@@ -1,6 +1,7 @@
 package hospital.emr.lab.services;
 
 import hospital.emr.lab.dtos.LabTestDTO;
+import hospital.emr.lab.entities.GenericLabTest;
 import hospital.emr.lab.entities.LabTest;
 import hospital.emr.lab.enums.SampleType;
 import hospital.emr.lab.enums.TestCategory;
@@ -10,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,8 +33,86 @@ public class LabTestRegistryService {
     public List<LabTestDTO> getAllTests() {
         log.info("Fetching all lab tests");
         return labTestRepository.findAll().stream()
+                .filter(test -> !Boolean.FALSE.equals(test.getIsActive()))
                 .map(this::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Create a new catalog test.
+     */
+    @Transactional
+    public LabTestDTO createTest(LabTestDTO dto) {
+        if (dto.getName() == null || dto.getName().isBlank()) {
+            throw new IllegalArgumentException("Test name is required");
+        }
+        if (labTestRepository.existsByNameIgnoreCase(dto.getName().trim())) {
+            throw new IllegalArgumentException("A test with this name already exists");
+        }
+
+        GenericLabTest test = new GenericLabTest();
+        test.setName(dto.getName().trim());
+        test.setPrice(dto.getPrice());
+        test.setCategory(dto.getCategory());
+        test.setSampleType(dto.getSampleType());
+        test.setDescription(dto.getDescription());
+        test.setReferenceRange(dto.getReferenceRange());
+        test.setIsActive(true);
+
+        return toDTO(labTestRepository.save(test));
+    }
+
+    /**
+     * Update an existing catalog test.
+     */
+    @Transactional
+    public LabTestDTO updateTest(Long id, LabTestDTO dto) {
+        LabTest test = labTestRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Lab test not found with id: " + id));
+
+        if (dto.getName() != null && !dto.getName().isBlank()) {
+            test.setName(dto.getName().trim());
+        }
+        if (dto.getPrice() != null) {
+            test.setPrice(dto.getPrice());
+        }
+        if (dto.getCategory() != null) {
+            test.setCategory(dto.getCategory());
+        }
+        if (dto.getSampleType() != null) {
+            test.setSampleType(dto.getSampleType());
+        }
+        if (dto.getDescription() != null) {
+            test.setDescription(dto.getDescription());
+        }
+        applyReferenceRange(test, dto.getReferenceRange());
+
+        return toDTO(labTestRepository.save(test));
+    }
+
+    /**
+     * Soft-delete a catalog test so existing orders keep their history.
+     */
+    @Transactional
+    public void deleteTest(Long id) {
+        LabTest test = labTestRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Lab test not found with id: " + id));
+        test.setIsActive(false);
+        labTestRepository.save(test);
+    }
+
+    private void applyReferenceRange(LabTest test, String value) {
+        if (value == null) {
+            return;
+        }
+        try {
+            Method setter = test.getClass().getMethod("setReferenceRange", String.class);
+            setter.invoke(test, value);
+        } catch (NoSuchMethodException e) {
+            log.warn("Test {} does not support reference ranges", test.getName());
+        } catch (Exception e) {
+            log.warn("Could not set reference range for test {}: {}", test.getName(), e.getMessage());
+        }
     }
 
     /**

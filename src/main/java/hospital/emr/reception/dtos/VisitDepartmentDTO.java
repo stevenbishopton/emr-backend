@@ -23,4 +23,7 @@ public class VisitDepartmentDTO {
     private String patientName;
     private String patientCode;
     private LocalDateTime visitDateTime;
+
+    // True when at least one vitals record exists for this visit
+    private Boolean hasVitals;
 }

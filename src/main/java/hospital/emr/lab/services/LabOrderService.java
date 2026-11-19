@@ -224,7 +224,22 @@ public class LabOrderService {
         }
         LabOrder saved = orderRepository.save(order);
         recordAudit(saved.getId(), "RESULTS_VERIFIED", previous, saved.getStatus(), notes);
+        notifyResultsReady(saved);
         return toDTO(saved);
+    }
+
+    private void notifyResultsReady(LabOrder order) {
+        String message = "Lab order #" + order.getId() + " (patient #" + order.getPatientId()
+                + ") results are ready.";
+        try {
+            notificationService.sendDepartmentNotification(
+                    "laboratory", "doctor", "RESULTS_READY",
+                    "Lab Results Ready", message, "MEDIUM",
+                    "{\"orderId\":" + order.getId() + ",\"patientId\":" + order.getPatientId()
+                            + ",\"visitId\":" + (order.getVisitId() == null ? "null" : order.getVisitId()) + "}");
+        } catch (Exception ex) {
+            log.warn("Failed to dispatch results-ready alert for order {}: {}", order.getId(), ex.getMessage());
+        }
     }
 
     @Transactional

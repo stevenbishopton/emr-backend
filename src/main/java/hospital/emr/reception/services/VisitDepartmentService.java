@@ -4,6 +4,7 @@ import hospital.emr.common.entities.Department;
 import hospital.emr.common.exceptions.DepartmentNotFoundException;
 import hospital.emr.common.repos.DepartmentRepository;
 import hospital.emr.notification.service.DepartmentNotificationService;
+import hospital.emr.patient.repos.VitalSignsRepository;
 import hospital.emr.reception.dtos.QueueFilterRequest;
 import hospital.emr.reception.dtos.VisitDepartmentDTO;
 import hospital.emr.reception.entities.Visit;
@@ -34,6 +35,16 @@ public class VisitDepartmentService {
     private final VisitDepartmentRepository visitDepartmentRepository;
     private final VisitDepartmentMapper visitDepartmentMapper;
     private final DepartmentNotificationService departmentNotificationService;
+    private final VitalSignsRepository vitalSignsRepository;
+
+    private List<VisitDepartmentDTO> enrichWithVitals(List<VisitDepartmentDTO> dtos) {
+        for (VisitDepartmentDTO dto : dtos) {
+            if (dto.getVisitId() != null) {
+                dto.setHasVitals(vitalSignsRepository.existsByVisit_Id(dto.getVisitId()));
+            }
+        }
+        return dtos;
+    }
 
     @Transactional
     public VisitDepartmentDTO sendToDepartment(Long visitId, Long departmentId) {
@@ -194,11 +205,11 @@ public class VisitDepartmentService {
 
     @Transactional(readOnly = true)
     public List<VisitDepartmentDTO> findDepartmentQueue(Long deptId) {
-        return visitDepartmentRepository
+        return enrichWithVitals(visitDepartmentRepository
                 .findByDepartmentIdAndStatus(deptId, VisitStatus.IN_QUEUE)
                 .stream()
                 .map(visitDepartmentMapper::toDto)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
     @Transactional(readOnly = true)
@@ -240,9 +251,9 @@ public class VisitDepartmentService {
             }
         }
 
-        return visitDepartments.stream()
+        return enrichWithVitals(visitDepartments.stream()
                 .map(visitDepartmentMapper::toDto)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
 

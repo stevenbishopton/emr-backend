@@ -9,6 +9,7 @@ import hospital.emr.lab.services.LabTestRegistryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -81,5 +82,33 @@ public class LabTestController {
     @GetMapping("/{id}/analytes")
     public ResponseEntity<List<LabAnalyteTemplateDTO>> getAnalyteTemplates(@PathVariable Long id) {
         return ResponseEntity.ok(analyteTemplateService.getForTest(id));
+    }
+
+    /**
+     * Create a new catalog test (admin / lab personnel only)
+     */
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_LAB_PERSONNEL')")
+    public ResponseEntity<LabTestDTO> createTest(@RequestBody LabTestDTO testDTO) {
+        return new ResponseEntity<>(testRegistryService.createTest(testDTO), HttpStatus.CREATED);
+    }
+
+    /**
+     * Update an existing catalog test (admin / lab personnel only)
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_LAB_PERSONNEL')")
+    public ResponseEntity<LabTestDTO> updateTest(@PathVariable Long id, @RequestBody LabTestDTO testDTO) {
+        return ResponseEntity.ok(testRegistryService.updateTest(id, testDTO));
+    }
+
+    /**
+     * Delete a catalog test (admin / lab personnel only)
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_LAB_PERSONNEL')")
+    public ResponseEntity<Void> deleteTest(@PathVariable Long id) {
+        testRegistryService.deleteTest(id);
+        return ResponseEntity.noContent().build();
     }
 }

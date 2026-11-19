@@ -101,6 +101,14 @@ public class PrescriptionAdministrationService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<PrescriptionAdministrationDTO> getAdministrationsByAdmission(Long admissionId) {
+        return prescriptionAdministrationRepository.findByAdmissionId(admissionId)
+                .stream()
+                .map(administrationMapper::toDto)
+                .toList();
+    }
+
     @Transactional
     public PrescriptionAdministrationDTO toggleAdministration(Long entryId, LocalDate date, LocalTime time, String administeredBy) {
         AdmissionPrescriptionEntry entry = admissionPrescriptionEntryRepository.findById(entryId)

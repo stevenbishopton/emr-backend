@@ -77,9 +77,9 @@ public class Patient {
 
     private Boolean isHealthInsured;
 
-    private String HmoName;
+    private String hmoName;
 
-    private String HmoPolicyNumber;
+    private String hmoPolicyNumber;
 
 }
 

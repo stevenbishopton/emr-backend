@@ -34,3 +34,12 @@ build/
 
 ### Uploaded files ###
 uploads/
+
+### H2 local database ###
+*.mv.db
+*.trace.db
+
+### Environment ###
+.env
+.env.*
+!.env.example

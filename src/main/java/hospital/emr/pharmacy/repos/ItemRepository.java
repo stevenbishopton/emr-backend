@@ -70,6 +70,18 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     // Count items with low stock
     @Query("SELECT COUNT(i) FROM Item i WHERE i.quantity < :threshold")
     long countItemsWithLowStock(@Param("threshold") BigDecimal threshold);
+
+    // List items with low stock ordered by quantity ascending
+    @Query("SELECT i FROM Item i WHERE i.quantity < :threshold ORDER BY i.quantity ASC")
+    List<Item> findItemsWithLowStock(@Param("threshold") BigDecimal threshold);
+
+    // List expired items (expiration date in the past)
+    @Query("SELECT i FROM Item i WHERE i.expirationDate < CURRENT_DATE ORDER BY i.expirationDate ASC")
+    List<Item> findExpiredItems();
+
+    // Sum of stock value at selling price
+    @Query("SELECT COALESCE(SUM(i.quantity * i.sellingPrice), 0) FROM Item i")
+    BigDecimal totalStockValue();
     
     // Count expired items
     @Query("SELECT COUNT(i) FROM Item i WHERE i.expirationDate < CURRENT_DATE")

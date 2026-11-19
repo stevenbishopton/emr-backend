@@ -17,4 +17,6 @@ public interface VitalSignsRepository extends JpaRepository<VitalSigns, Long> {
 
     // Get latest vital signs by visit
     Optional<VitalSigns> findTopByVisit_IdOrderByTimeTakenDesc(Long visitId);
+
+    boolean existsByVisit_Id(Long visitId);
 }

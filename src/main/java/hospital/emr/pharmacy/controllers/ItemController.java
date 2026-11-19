@@ -64,4 +64,30 @@ public class ItemController {
         return ResponseEntity.ok(itemsPage);
     }
 
+    // --- Inventory health: expiry & stock ---
+
+    @GetMapping("/expired")
+    public ResponseEntity<java.util.List<ItemDTO>> getExpiredItems() {
+        return ResponseEntity.ok(itemService.getExpiredItems());
+    }
+
+    @GetMapping("/expiring")
+    public ResponseEntity<java.util.List<ItemDTO>> getExpiringItems(
+            @RequestParam(defaultValue = "30") int days) {
+        return ResponseEntity.ok(itemService.getExpiringItems(days));
+    }
+
+    @GetMapping("/low-stock")
+    public ResponseEntity<java.util.List<ItemDTO>> getLowStockItems(
+            @RequestParam(defaultValue = "10") java.math.BigDecimal threshold) {
+        return ResponseEntity.ok(itemService.getLowStockItems(threshold));
+    }
+
+    @GetMapping("/inventory-summary")
+    public ResponseEntity<hospital.emr.pharmacy.dto.InventorySummaryDTO> getInventorySummary(
+            @RequestParam(defaultValue = "10") java.math.BigDecimal threshold,
+            @RequestParam(defaultValue = "30") int days) {
+        return ResponseEntity.ok(itemService.getInventorySummary(threshold, days));
+    }
+
 }

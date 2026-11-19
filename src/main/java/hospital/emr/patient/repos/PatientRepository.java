@@ -37,19 +37,19 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     Optional<Patient> findByIsHealthInsured(@Param("isHealthInsured") Boolean isHealthInsured);
     
     // Find patient by HMO policy number
-    @Query("SELECT p FROM Patient p WHERE p.HmoPolicyNumber = :hmoPolicyNumber")
+    @Query("SELECT p FROM Patient p WHERE p.hmoPolicyNumber = :hmoPolicyNumber")
     Optional<Patient> findByHmoPolicyNumber(@Param("hmoPolicyNumber") String hmoPolicyNumber);
     
     // Find patients by HMO name
-    @Query("SELECT p FROM Patient p WHERE lower(p.HmoName) LIKE lower(concat('%', :hmoName, '%'))")
+    @Query("SELECT p FROM Patient p WHERE lower(p.hmoName) LIKE lower(concat('%', :hmoName, '%'))")
     Optional<Patient> findByHmoNameContainingIgnoreCase(@Param("hmoName") String hmoName);
     
     // Find patients with HMO insurance (HMO name is not null)
-    @Query("SELECT p FROM Patient p WHERE p.isHealthInsured = true AND p.HmoName IS NOT NULL")
+    @Query("SELECT p FROM Patient p WHERE p.isHealthInsured = true AND p.hmoName IS NOT NULL")
     Optional<Patient> findPatientsWithHmo();
     
     // Check if HMO policy number exists
-    @Query("SELECT COUNT(p) > 0 FROM Patient p WHERE p.HmoPolicyNumber = :hmoPolicyNumber")
+    @Query("SELECT COUNT(p) > 0 FROM Patient p WHERE p.hmoPolicyNumber = :hmoPolicyNumber")
     boolean existsByHmoPolicyNumber(@Param("hmoPolicyNumber") String hmoPolicyNumber);
 
 //    // Find patient by email

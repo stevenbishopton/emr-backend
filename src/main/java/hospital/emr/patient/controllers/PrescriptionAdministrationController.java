@@ -42,6 +42,12 @@ public class PrescriptionAdministrationController {
         return new ResponseEntity<>(administrations, HttpStatus.OK);
     }
 
+    @GetMapping("/admission/{admissionId}")
+    public ResponseEntity<List<PrescriptionAdministrationDTO>> getAdministrationsByAdmission(@PathVariable Long admissionId) {
+        List<PrescriptionAdministrationDTO> administrations = prescriptionAdministrationService.getAdministrationsByAdmission(admissionId);
+        return new ResponseEntity<>(administrations, HttpStatus.OK);
+    }
+
     @PostMapping("/custom")
     public ResponseEntity<PrescriptionAdministrationDTO> createCustomAdministration(
             @RequestParam Long entryId,

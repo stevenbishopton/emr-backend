@@ -1,6 +1,7 @@
 package hospital.emr.patient.controllers;
 
 import hospital.emr.patient.dtos.PrescriptionDTO;
+import hospital.emr.patient.dtos.PrescriptionEntryDTO;
 import hospital.emr.patient.services.PrescriptionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,26 @@ public class PrescriptionController {
     public ResponseEntity<PrescriptionDTO> createPrescription(@Valid @RequestBody PrescriptionDTO prescriptionDTO) {
         PrescriptionDTO createdPrescription = prescriptionService.createPrescription(prescriptionDTO);
         return new ResponseEntity<>(createdPrescription, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/medical-history/{id}/entries")
+    public ResponseEntity<PrescriptionEntryDTO> addEntryToMedicalHistory(
+            @PathVariable Long id,
+            @RequestBody PrescriptionEntryDTO entryDTO) {
+        return ResponseEntity.ok(prescriptionService.addEntryToMedicalHistory(id, entryDTO));
+    }
+
+    @PutMapping("/entries/{id}")
+    public ResponseEntity<PrescriptionEntryDTO> updateEntry(
+            @PathVariable Long id,
+            @RequestBody PrescriptionEntryDTO entryDTO) {
+        return ResponseEntity.ok(prescriptionService.updateEntry(id, entryDTO));
+    }
+
+    @DeleteMapping("/entries/{id}")
+    public ResponseEntity<Void> deleteEntry(@PathVariable Long id) {
+        prescriptionService.deleteEntry(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
