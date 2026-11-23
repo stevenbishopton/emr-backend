@@ -85,6 +85,56 @@ public class PrescriptionService {
         return prescriptionEntryMapper.toDto(savedEntry);
     }
 
+    /**
+     * Append a medication to the inpatient chart for a specific visit
+     * (admission). Each admission has its own visit, so a readmission starts
+     * with an empty chart instead of inheriting the previous admission's meds.
+     */
+    @Transactional
+    public PrescriptionEntryDTO addEntryToVisit(Long visitId, PrescriptionEntryDTO entryDTO) {
+        Visit visit = visitRepository.findById(visitId)
+                .orElseThrow(() -> new VisitNotFoundException("Visit not found with ID: " + visitId));
+
+        var medicalHistory = medicalHistoryRepository.findByPatient_Id(visit.getPatient().getId());
+        if (medicalHistory == null) {
+            throw new MedicalHistoryNotFoundException(
+                    "No medical history found for visit ID: " + visitId);
+        }
+
+        Prescription prescription = prescriptionRepository.findAllByVisit_Id(visitId).stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getIsDischarge()))
+                .max(Comparator.comparing(Prescription::getCreatedAt,
+                        Comparator.nullsFirst(Comparator.naturalOrder())))
+                .orElse(null);
+
+        if (prescription == null) {
+            prescription = new Prescription();
+            prescription.setMedicalHistory(medicalHistory);
+            prescription.setVisit(visit);
+            prescription.setIsDischarge(false);
+            prescription.setAdditionalInstructions("Inpatient medication chart");
+            prescription.setPrescriptionEntries(new ArrayList<>());
+        }
+        if (prescription.getPrescriptionEntries() == null) {
+            prescription.setPrescriptionEntries(new ArrayList<>());
+        }
+
+        PrescriptionEntry entry = new PrescriptionEntry();
+        entry.setItemName(entryDTO.getItemName());
+        entry.setDosage(entryDTO.getDosage());
+        entry.setRoute(entryDTO.getRoute());
+        if (entryDTO.getDurationDays() != null) {
+            entry.setDurationDays(entryDTO.getDurationDays());
+        }
+        entry.setPrescription(prescription);
+        prescription.getPrescriptionEntries().add(entry);
+
+        Prescription saved = prescriptionRepository.save(prescription);
+        PrescriptionEntry savedEntry = saved.getPrescriptionEntries()
+                .get(saved.getPrescriptionEntries().size() - 1);
+        return prescriptionEntryMapper.toDto(savedEntry);
+    }
+
     @Transactional
     public PrescriptionEntryDTO updateEntry(Long entryId, PrescriptionEntryDTO dto) {
         PrescriptionEntry entry = prescriptionEntryRepository.findById(entryId)
@@ -227,6 +277,14 @@ public class PrescriptionService {
     @Transactional(readOnly = true)
     public List<PrescriptionDTO> findAllPrescriptionByMedicalHistoryId(Long id) {
         List<Prescription> prescriptions = prescriptionRepository.findAllByMedicalHistoryId(id);
+        return prescriptions.stream()
+                .map(prescriptionMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PrescriptionDTO> findAllPrescriptionByVisitId(Long visitId) {
+        List<Prescription> prescriptions = prescriptionRepository.findAllByVisit_Id(visitId);
         return prescriptions.stream()
                 .map(prescriptionMapper::toDto)
                 .collect(Collectors.toList());

@@ -11,6 +11,8 @@ import java.util.Optional;
 public interface PrescriptionRepository extends JpaRepository<Prescription, Long> {
     List<Prescription> findAllByMedicalHistoryId(Long id);
 
+    List<Prescription> findAllByVisit_Id(Long visitId);
+
     Optional<Prescription> findByVisit_Id(Long visitId);
 
     List<Prescription> findByIsDischarge(Boolean isDischarge);

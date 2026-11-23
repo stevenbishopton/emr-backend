@@ -30,6 +30,13 @@ public class PrescriptionController {
         return ResponseEntity.ok(prescriptionService.addEntryToMedicalHistory(id, entryDTO));
     }
 
+    @PostMapping("/visit/{id}/entries")
+    public ResponseEntity<PrescriptionEntryDTO> addEntryToVisit(
+            @PathVariable Long id,
+            @RequestBody PrescriptionEntryDTO entryDTO) {
+        return ResponseEntity.ok(prescriptionService.addEntryToVisit(id, entryDTO));
+    }
+
     @PutMapping("/entries/{id}")
     public ResponseEntity<PrescriptionEntryDTO> updateEntry(
             @PathVariable Long id,
@@ -59,6 +66,12 @@ public class PrescriptionController {
     @GetMapping("medical-history/{id}")
     public ResponseEntity<List<PrescriptionDTO>> findAllPrescriptionByMedicalHistoryId(@PathVariable Long id) {
         List<PrescriptionDTO> prescriptions = prescriptionService.findAllPrescriptionByMedicalHistoryId(id);
+        return new ResponseEntity<>(prescriptions, HttpStatus.OK);
+    }
+
+    @GetMapping("visit/{id}")
+    public ResponseEntity<List<PrescriptionDTO>> findAllPrescriptionByVisitId(@PathVariable Long id) {
+        List<PrescriptionDTO> prescriptions = prescriptionService.findAllPrescriptionByVisitId(id);
         return new ResponseEntity<>(prescriptions, HttpStatus.OK);
     }
 
